@@ -1,0 +1,44 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "LoginFrame",
+      "request": "launch",
+      "mainClass": "GUI.LoginFrame",
+      "projectName": "Pokedex_b281de57"
+    },
+    {
+      "type": "java",
+      "name": "AdminFrame",
+      "request": "launch",
+      "mainClass": "AdminFrame",
+      "projectName": "Pokedex_b281de57"
+    },
+    {
+      "type": "java",
+      "name": "LoginSystem",
+      "request": "launch",
+      "mainClass": "LoginSystem",
+      "projectName": "Pokedex_b281de57"
+    },
+    {
+      "type": "java",
+      "name": "LoginFrame",
+      "request": "launch",
+      "mainClass": "LoginFrame",
+      "projectName": "Pokedex_b281de57"
+    },
+    {
+      "type": "java",
+      "name": "Launch Main",
+      "request": "launch",
+      "mainClass": "Main",
+      "vmArgs": "--enable-native-access=ALL-UNNAMED",
+      "classPaths": [
+        "${workspaceFolder}/bin",
+        "${workspaceFolder}/lib/sqlite-jdbc-3.49.1.0.jar"
+      ]
+    }
+  ]
+}
