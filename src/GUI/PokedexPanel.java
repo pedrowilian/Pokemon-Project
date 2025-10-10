@@ -13,11 +13,11 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
+import model.Pokemon;
 
 public class PokedexPanel extends JPanel {
     private static final Logger LOGGER = Logger.getLogger(PokedexPanel.class.getName());
-    private static final String IMAGE_DIR = "images/";
-
+    private static final String IMAGE_DIR = "Images/Image-Pokedex/";
     private final Connection pokedexConn;
     private final Connection usuariosConn;
     private final JFrame parentFrame;
@@ -31,7 +31,8 @@ public class PokedexPanel extends JPanel {
     private JComboBox<String> typeFilter;
     private JSlider hpSlider, attackSlider, defenseSlider, spAtkSlider, spDefSlider, speedSlider;
     private JLabel hpLabel, attackLabel, defenseLabel, spAtkLabel, spDefLabel, speedLabel, statusBar, adminStatusLabel;
-    private JButton buscarButton, mostrarTodosButton, clearButton, sairButton, voltarButton, adminButton;
+    private JButton buscarButton, mostrarTodosButton, clearButton, sairButton, voltarButton, adminButton, battleButton;
+    private Pokemon selectedPokemon;
 
     public PokedexPanel(Connection pokedexConn, Connection usuariosConn, JFrame parentFrame, String username) {
         this.pokedexConn = pokedexConn;
@@ -332,11 +333,59 @@ public class PokedexPanel extends JPanel {
             public void mouseExited(MouseEvent e) {
                 table.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
             }
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 1) {
+                    selectPokemon();
+                }
+            }
         });
 
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBorder(BorderFactory.createLineBorder(UIUtils.PRIMARY_COLOR, 2, true));
         return scrollPane;
+    }
+
+    private void selectPokemon() {
+        int row = table.getSelectedRow();
+        if (row == -1) return;
+        
+        int id = (int) tableModel.getValueAt(row, 1);
+        selectedPokemon = getPokemonById(id);
+        
+        if (selectedPokemon != null) {
+            statusBar.setText("Pokémon selecionado: " + selectedPokemon.getName() + " (ID: " + id + ")");
+            battleButton.setEnabled(true);
+        }
+    }
+
+    private Pokemon getPokemonById(int id) {
+        String sql = "SELECT * FROM pokedex WHERE ID = ?";
+        try (PreparedStatement ps = pokedexConn.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Pokemon(
+                        rs.getInt("ID"),
+                        rs.getString("Name"),
+                        rs.getString("Form"),
+                        rs.getString("Type1"),
+                        rs.getString("Type2"),
+                        rs.getInt("Total"),
+                        rs.getInt("HP"),
+                        rs.getInt("Attack"),
+                        rs.getInt("Defense"),
+                        rs.getInt("SpAtk"),
+                        rs.getInt("SpDef"),
+                        rs.getInt("Speed"),
+                        1
+                    );
+                }
+            }
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Erro ao buscar Pokémon", ex);
+        }
+        return null;
     }
 
     private JPanel createBottomPanel() {
@@ -352,6 +401,11 @@ public class PokedexPanel extends JPanel {
 
         JPanel bottomButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         bottomButtonPanel.setBackground(UIUtils.BG_COLOR);
+        
+        battleButton = UIUtils.createStyledButton("Batalhar", e -> startBattle(), "Iniciar batalha com Pokémon selecionado");
+        battleButton.setEnabled(false);
+        bottomButtonPanel.add(battleButton);
+        
         voltarButton = UIUtils.createStyledButton("Voltar", e -> {
             closeConnections();
             parentFrame.dispose();
@@ -361,6 +415,58 @@ public class PokedexPanel extends JPanel {
         bottomPanel.add(bottomButtonPanel, BorderLayout.CENTER);
 
         return bottomPanel;
+    }
+
+    private void startBattle() {
+        if (selectedPokemon == null) {
+            showError("Selecione um Pokémon para batalhar.");
+            return;
+        }
+        
+        // Get random enemy pokemon
+        Pokemon enemy = getRandomPokemon();
+        if (enemy == null) {
+            showError("Erro ao selecionar Pokémon inimigo.");
+            return;
+        }
+        
+        // Open battle window
+        parentFrame.dispose();
+        SwingUtilities.invokeLater(() -> {
+            JFrame battleFrame = new JFrame("Batalha Pokémon");
+            battleFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            battleFrame.setSize(900, 600);
+            battleFrame.setLocationRelativeTo(null);
+            battleFrame.setContentPane(new BattlePanel(selectedPokemon, enemy, pokedexConn, usuariosConn, username));
+            battleFrame.setVisible(true);
+        });
+    }
+
+    private Pokemon getRandomPokemon() {
+        String sql = "SELECT * FROM pokedex ORDER BY RANDOM() LIMIT 1";
+        try (Statement stmt = pokedexConn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            if (rs.next()) {
+                return new Pokemon(
+                    rs.getInt("ID"),
+                    rs.getString("Name"),
+                    rs.getString("Form"),
+                    rs.getString("Type1"),
+                    rs.getString("Type2"),
+                    rs.getInt("Total"),
+                    rs.getInt("HP"),
+                    rs.getInt("Attack"),
+                    rs.getInt("Defense"),
+                    rs.getInt("SpAtk"),
+                    rs.getInt("SpDef"),
+                    rs.getInt("Speed"),
+                    1
+                );
+            }
+        } catch (SQLException ex) {
+            LOGGER.log(Level.SEVERE, "Erro ao buscar Pokémon aleatório", ex);
+        }
+        return null;
     }
 
     private boolean checkAdmin() {
@@ -657,4 +763,5 @@ public class PokedexPanel extends JPanel {
     }
 
     private record AttributeMaxValues(int hp, int attack, int defense, int spAtk, int spDef, int speed) {}
+
 }

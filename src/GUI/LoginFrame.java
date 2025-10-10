@@ -47,7 +47,7 @@ public class LoginFrame extends JFrame {
 
         // Pokeball Image
         try {
-            ImageIcon pokeballIcon = new ImageIcon("poke-ball.png");
+            ImageIcon pokeballIcon = new ImageIcon("Images/poke-ball.png");
             Image pokeballImage = pokeballIcon.getImage().getScaledInstance(120, 120, Image.SCALE_SMOOTH);
             pokeballIcon = new ImageIcon(pokeballImage);
             JLabel pokeballLabel = new JLabel(pokeballIcon);
