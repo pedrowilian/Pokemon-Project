@@ -3,6 +3,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "Main",
+      "request": "launch",
+      "mainClass": "app.Main",
+      "projectName": "your-project-name"
+    },
+    {
+      "type": "java",
       "name": "LoginFrame",
       "request": "launch",
       "mainClass": "GUI.LoginFrame",
@@ -38,7 +45,8 @@
       "classPaths": [
         "${workspaceFolder}/bin",
         "${workspaceFolder}/lib/sqlite-jdbc-3.49.1.0.jar"
-      ]
+      ],
+      "cwd": "${workspaceFolder}" // <-- ADD THIS LINE
     }
   ]
 }
