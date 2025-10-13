@@ -1,18 +1,51 @@
 package GUI;
 
-import java.awt.*;
-import java.awt.event.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.RenderingHints;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.Connection;
-import java.util.*;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 
 import org.json.JSONArray;
@@ -50,6 +83,7 @@ public class EnhancedBattlePanel extends JPanel {
     private JLabel playerSpriteLabel, enemySpriteLabel;
     private JPanel[] playerTeamSlots;
     private JPanel[] enemyTeamSlots;
+    private JPanel playerTypePanel, enemyTypePanel;
 
     private boolean playerTurn = true;
     private boolean battleEnded = false;
@@ -160,36 +194,41 @@ public class EnhancedBattlePanel extends JPanel {
     private JPanel createVerticalTeamBar(List<Pokemon> team, boolean isPlayer) {
         JPanel barPanel = new JPanel();
         barPanel.setLayout(new BoxLayout(barPanel, BoxLayout.Y_AXIS));
-        barPanel.setBackground(new Color(0, 0, 0, 180));
+        barPanel.setOpaque(true);
+        barPanel.setBackground(new Color(0, 0, 0, 200));
         barPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(isPlayer ? new Color(76, 175, 80) : new Color(220, 20, 60), 3),
-            BorderFactory.createEmptyBorder(15, 10, 15, 10)
+            BorderFactory.createEmptyBorder(12, 8, 12, 8)
         ));
         barPanel.setPreferredSize(new Dimension(110, 0));
 
         // Title
         JLabel titleLabel = new JLabel(isPlayer ? "YOUR TEAM" : "ENEMY TEAM", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 11));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         barPanel.add(titleLabel);
-        barPanel.add(Box.createVerticalStrut(15));
+        barPanel.add(Box.createVerticalStrut(12));
 
         JPanel[] slots = new JPanel[5];
 
         for (int i = 0; i < 5; i++) {
             Pokemon pokemon = team.get(i);
+            final int index = i;
+
+            JPanel slotContainer = new JPanel(new BorderLayout(0, 0));
+            slotContainer.setOpaque(false);
+            slotContainer.setMaximumSize(new Dimension(94, 125));
+            slotContainer.setAlignmentX(Component.CENTER_ALIGNMENT);
 
             JPanel slot = new JPanel();
             slot.setLayout(new BoxLayout(slot, BoxLayout.Y_AXIS));
             slot.setOpaque(true);
-            slot.setBackground(new Color(255, 255, 255, 230));
+            slot.setBackground(new Color(255, 255, 255, 240));
             slot.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(60, 60, 60), 2, true),
-                BorderFactory.createEmptyBorder(6, 6, 6, 6)
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
             ));
-            slot.setMaximumSize(new Dimension(90, 120));
-            slot.setAlignmentX(Component.CENTER_ALIGNMENT);
 
             // Pokemon icon
             JLabel iconLabel = new JLabel();
@@ -197,7 +236,7 @@ public class EnhancedBattlePanel extends JPanel {
             iconLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             slot.add(iconLabel);
 
-            slot.add(Box.createVerticalStrut(5));
+            slot.add(Box.createVerticalStrut(4));
 
             // Pokemon name (shortened)
             String displayName = pokemon.getName().length() > 8 ?
@@ -220,11 +259,22 @@ public class EnhancedBattlePanel extends JPanel {
             hpBar.setAlignmentX(Component.CENTER_ALIGNMENT);
             slot.add(hpBar);
 
+            // Active indicator (initially hidden)
+            JLabel activeIndicator = new JLabel("★ ACTIVE ★", SwingConstants.CENTER);
+            activeIndicator.setFont(new Font("Arial", Font.BOLD, 8));
+            activeIndicator.setForeground(new Color(255, 215, 0));
+            activeIndicator.setAlignmentX(Component.CENTER_ALIGNMENT);
+            activeIndicator.setVisible(isPlayer ? i == currentPlayerPokemon : i == currentEnemyPokemon);
+            slot.add(Box.createVerticalStrut(2));
+            slot.add(activeIndicator);
+
+            slotContainer.add(slot, BorderLayout.CENTER);
+
             slots[i] = slot;
-            barPanel.add(slot);
+            barPanel.add(slotContainer);
 
             if (i < 4) {
-                barPanel.add(Box.createVerticalStrut(12));
+                barPanel.add(Box.createVerticalStrut(10));
             }
         }
 
@@ -245,24 +295,24 @@ public class EnhancedBattlePanel extends JPanel {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setOpaque(true);
-        card.setBackground(new Color(0, 0, 0, 150));
+        card.setBackground(new Color(0, 0, 0, 180));
         card.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(isPlayer ? new Color(76, 175, 80) : new Color(220, 20, 60), 3, true),
-            BorderFactory.createEmptyBorder(12, 20, 12, 20)
+            BorderFactory.createEmptyBorder(10, 15, 10, 15)
         ));
-        card.setMaximumSize(new Dimension(2000, 140));
+        card.setMaximumSize(new Dimension(2000, 130));
 
         // Name and Level row
-        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        JPanel headerPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         headerPanel.setOpaque(false);
 
         JLabel nameLabel = new JLabel(pokemon.getName().toUpperCase());
-        nameLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        nameLabel.setFont(new Font("Arial", Font.BOLD, 20));
         nameLabel.setForeground(Color.WHITE);
         headerPanel.add(nameLabel);
 
         JLabel levelLabel = new JLabel(" LV.50 ");
-        levelLabel.setFont(new Font("Arial", Font.BOLD, 11));
+        levelLabel.setFont(new Font("Arial", Font.BOLD, 10));
         levelLabel.setForeground(Color.WHITE);
         levelLabel.setOpaque(true);
         levelLabel.setBackground(isPlayer ? new Color(76, 175, 80) : new Color(220, 20, 60));
@@ -277,12 +327,12 @@ public class EnhancedBattlePanel extends JPanel {
             enemyNameLabel = nameLabel;
         }
 
-        card.add(Box.createVerticalStrut(8));
+        card.add(Box.createVerticalStrut(6));
 
         // HP Label
         JLabel hpLabel = new JLabel("HP: " + (isPlayer ? playerCurrentHP[currentPlayerPokemon] : enemyCurrentHP[currentEnemyPokemon]) +
                                     " / " + (isPlayer ? playerMaxHP[currentPlayerPokemon] : enemyMaxHP[currentEnemyPokemon]));
-        hpLabel.setFont(new Font("Arial", Font.BOLD, 15));
+        hpLabel.setFont(new Font("Arial", Font.BOLD, 14));
         hpLabel.setForeground(Color.WHITE);
         hpLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(hpLabel);
@@ -293,18 +343,18 @@ public class EnhancedBattlePanel extends JPanel {
             enemyHPLabel = hpLabel;
         }
 
-        card.add(Box.createVerticalStrut(6));
+        card.add(Box.createVerticalStrut(5));
 
         // Health Bar
         JProgressBar healthBar = new JProgressBar(0, isPlayer ? playerMaxHP[currentPlayerPokemon] : enemyMaxHP[currentEnemyPokemon]);
         healthBar.setValue(isPlayer ? playerCurrentHP[currentPlayerPokemon] : enemyCurrentHP[currentEnemyPokemon]);
         healthBar.setStringPainted(true);
         healthBar.setString("100%");
-        healthBar.setFont(new Font("Arial", Font.BOLD, 13));
+        healthBar.setFont(new Font("Arial", Font.BOLD, 12));
         healthBar.setForeground(new Color(76, 175, 80));
         healthBar.setBackground(new Color(80, 80, 80));
-        healthBar.setPreferredSize(new Dimension(400, 26));
-        healthBar.setMaximumSize(new Dimension(2000, 26));
+        healthBar.setPreferredSize(new Dimension(300, 22));
+        healthBar.setMaximumSize(new Dimension(2000, 22));
         healthBar.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
         healthBar.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(healthBar);
@@ -315,10 +365,10 @@ public class EnhancedBattlePanel extends JPanel {
             enemyHealthBar = healthBar;
         }
 
-        card.add(Box.createVerticalStrut(8));
+        card.add(Box.createVerticalStrut(6));
 
         // Type badges
-        JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        JPanel typePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
         typePanel.setOpaque(false);
         typePanel.add(createTypeBadge(pokemon.getType1()));
         if (pokemon.getType2() != null && !pokemon.getType2().isEmpty() && !pokemon.getType2().equals("None")) {
@@ -327,13 +377,21 @@ public class EnhancedBattlePanel extends JPanel {
         typePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.add(typePanel);
 
+        // Store reference to type panel for updates
+        if (isPlayer) {
+            playerTypePanel = typePanel;
+        } else {
+            enemyTypePanel = typePanel;
+        }
+
         return card;
     }
 
     private JPanel createBattleFieldPanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setOpaque(false);
-        panel.setPreferredSize(new Dimension(0, 320));
+        panel.setPreferredSize(new Dimension(0, 280));
+        panel.setMinimumSize(new Dimension(400, 200));
 
         GridBagConstraints gbc = new GridBagConstraints();
 
@@ -345,7 +403,7 @@ public class EnhancedBattlePanel extends JPanel {
         gbc.weightx = 0.5;
         gbc.weighty = 0.6;
         gbc.anchor = GridBagConstraints.NORTHEAST;
-        gbc.insets = new Insets(20, 20, 0, 30);
+        gbc.insets = new Insets(15, 15, 0, 20);
         panel.add(enemySpriteLabel, gbc);
 
         // Player sprite (bottom left area)
@@ -356,21 +414,22 @@ public class EnhancedBattlePanel extends JPanel {
         gbc.weightx = 0.5;
         gbc.weighty = 0.4;
         gbc.anchor = GridBagConstraints.SOUTHWEST;
-        gbc.insets = new Insets(0, 30, 10, 20);
+        gbc.insets = new Insets(0, 20, 8, 15);
         panel.add(playerSpriteLabel, gbc);
 
         // Battle message in the center-bottom
         JPanel messagePanel = new JPanel(new BorderLayout());
         messagePanel.setOpaque(true);
-        messagePanel.setBackground(new Color(0, 0, 0, 210));
+        messagePanel.setBackground(new Color(0, 0, 0, 220));
         messagePanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(255, 215, 0), 3, true),
-            BorderFactory.createEmptyBorder(12, 15, 12, 15)
+            BorderFactory.createEmptyBorder(10, 12, 10, 12)
         ));
-        messagePanel.setPreferredSize(new Dimension(600, 60));
+        messagePanel.setPreferredSize(new Dimension(500, 50));
+        messagePanel.setMaximumSize(new Dimension(700, 60));
 
         battleMessageLabel = new JLabel("", SwingConstants.CENTER);
-        battleMessageLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        battleMessageLabel.setFont(new Font("Arial", Font.BOLD, 16));
         battleMessageLabel.setForeground(Color.WHITE);
         messagePanel.add(battleMessageLabel, BorderLayout.CENTER);
 
@@ -381,18 +440,19 @@ public class EnhancedBattlePanel extends JPanel {
         gbc.weighty = 0.0;
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.insets = new Insets(5, 40, 5, 40);
+        gbc.insets = new Insets(4, 30, 4, 30);
         panel.add(messagePanel, gbc);
 
         return panel;
     }
 
     private JPanel createControlPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 10));
+        JPanel panel = new JPanel(new BorderLayout(8, 8));
         panel.setOpaque(false);
+        panel.setMaximumSize(new Dimension(2000, 200));
 
         // Attack buttons grid
-        JPanel attackPanel = new JPanel(new GridLayout(2, 2, 10, 10));
+        JPanel attackPanel = new JPanel(new GridLayout(2, 2, 8, 8));
         attackPanel.setOpaque(false);
 
         attackButtons = new JButton[4];
@@ -404,7 +464,7 @@ public class EnhancedBattlePanel extends JPanel {
         panel.add(attackPanel, BorderLayout.CENTER);
 
         // Action buttons
-        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 0));
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         actionPanel.setOpaque(false);
 
         switchButton = createActionButton("SWITCH POKEMON", new Color(52, 152, 219));
@@ -425,20 +485,21 @@ public class EnhancedBattlePanel extends JPanel {
         Color disabledColor = new Color(120, 120, 120);
 
         JButton button = new JButton(String.format(
-            "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:10px'>PWR: %d | %s</span></div></html>",
+            "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:9px'>PWR: %d | %s</span></div></html>",
             attack.name, attack.power, attack.type.toUpperCase()));
 
-        button.setFont(new Font("Arial", Font.BOLD, 14));
+        button.setFont(new Font("Arial", Font.BOLD, 13));
         button.setBackground(typeColor);
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(typeColor.darker().darker(), 3, true),
-            BorderFactory.createEmptyBorder(12, 12, 12, 12)
+            BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setOpaque(true);
-        button.setPreferredSize(new Dimension(180, 60));
+        button.setPreferredSize(new Dimension(160, 55));
+        button.setMinimumSize(new Dimension(120, 45));
 
         // Store original color as client property
         button.putClientProperty("originalColor", typeColor);
@@ -454,7 +515,7 @@ public class EnhancedBattlePanel extends JPanel {
                     button.setBackground(original.brighter());
                     button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(Color.YELLOW, 3, true),
-                        BorderFactory.createEmptyBorder(12, 12, 12, 12)
+                        BorderFactory.createEmptyBorder(10, 10, 10, 10)
                     ));
                 }
             }
@@ -466,7 +527,7 @@ public class EnhancedBattlePanel extends JPanel {
                     button.setBackground(original);
                     button.setBorder(BorderFactory.createCompoundBorder(
                         BorderFactory.createLineBorder(original.darker().darker(), 3, true),
-                        BorderFactory.createEmptyBorder(12, 12, 12, 12)
+                        BorderFactory.createEmptyBorder(10, 10, 10, 10)
                     ));
                 } else {
                     // Ensure disabled button stays grey
@@ -483,13 +544,13 @@ public class EnhancedBattlePanel extends JPanel {
         Color disabledColor = new Color(120, 120, 120);
 
         JButton button = new JButton(text);
-        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setFont(new Font("Arial", Font.BOLD, 11));
         button.setBackground(color);
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(color.darker(), 2, true),
-            BorderFactory.createEmptyBorder(10, 20, 10, 20)
+            BorderFactory.createEmptyBorder(8, 16, 8, 16)
         ));
         button.setCursor(new Cursor(Cursor.HAND_CURSOR));
         button.setOpaque(true);
@@ -684,6 +745,7 @@ public class EnhancedBattlePanel extends JPanel {
             playerAttacks = generateAttacksFromJSON(playerTeam.get(newIndex));
             updateAttackButtons();
             updatePlayerInfo();
+            updateActiveIndicators();
 
             showBattleMessage("Go! " + playerTeam.get(newIndex).getName() + "!", 1500, () -> {
                 if (!playerTurn) {
@@ -712,12 +774,14 @@ public class EnhancedBattlePanel extends JPanel {
         }
 
         final int finalNewIndex = newIndex;
+        int oldIndex = currentEnemyPokemon;
         currentEnemyPokemon = newIndex;
 
         showBattleMessage("Rival sent out " + enemyTeam.get(finalNewIndex).getName() + "!", 2000, () -> {
             enemySpriteLabel.setIcon(loadPokemonSprite(enemyTeam.get(finalNewIndex).getId(), true));
             enemyAttacks = generateAttacksFromJSON(enemyTeam.get(finalNewIndex));
             updateEnemyInfo();
+            updateActiveIndicators();
 
             if (playerTurn) {
                 showBattleMessage("What will " + playerTeam.get(currentPlayerPokemon).getName() + " do?", 1000, () -> {
@@ -727,6 +791,30 @@ public class EnhancedBattlePanel extends JPanel {
                 executeEnemyTurn();
             }
         });
+    }
+
+    private void updateActiveIndicators() {
+        // Update player team active indicators
+        for (int i = 0; i < 5; i++) {
+            JPanel slot = playerTeamSlots[i];
+            Component[] components = slot.getComponents();
+            for (Component c : components) {
+                if (c instanceof JLabel && ((JLabel) c).getText().contains("ACTIVE")) {
+                    c.setVisible(i == currentPlayerPokemon);
+                }
+            }
+        }
+
+        // Update enemy team active indicators
+        for (int i = 0; i < 5; i++) {
+            JPanel slot = enemyTeamSlots[i];
+            Component[] components = slot.getComponents();
+            for (Component c : components) {
+                if (c instanceof JLabel && ((JLabel) c).getText().contains("ACTIVE")) {
+                    c.setVisible(i == currentEnemyPokemon);
+                }
+            }
+        }
     }
 
     private void showSwitchDialog() {
@@ -837,7 +925,7 @@ public class EnhancedBattlePanel extends JPanel {
             Color typeColor = getTypeColor(attack.type);
 
             attackButtons[i].setText(String.format(
-                "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:10px'>PWR: %d | %s</span></div></html>",
+                "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:9px'>PWR: %d | %s</span></div></html>",
                 attack.name, attack.power, attack.type.toUpperCase()));
 
             // Update the stored original color
@@ -848,7 +936,7 @@ public class EnhancedBattlePanel extends JPanel {
                 attackButtons[i].setBackground(typeColor);
                 attackButtons[i].setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(typeColor.darker().darker(), 3, true),
-                    BorderFactory.createEmptyBorder(12, 12, 12, 12)
+                    BorderFactory.createEmptyBorder(10, 10, 10, 10)
                 ));
             }
 
@@ -867,6 +955,7 @@ public class EnhancedBattlePanel extends JPanel {
         playerHealthBar.setMaximum(playerMaxHP[currentPlayerPokemon]);
         playerHealthBar.setValue(playerCurrentHP[currentPlayerPokemon]);
         updateHealthBar(true);
+        updateTypeBadges(true);
     }
 
     private void updateEnemyInfo() {
@@ -876,6 +965,22 @@ public class EnhancedBattlePanel extends JPanel {
         enemyHealthBar.setMaximum(enemyMaxHP[currentEnemyPokemon]);
         enemyHealthBar.setValue(enemyCurrentHP[currentEnemyPokemon]);
         updateHealthBar(false);
+        updateTypeBadges(false);
+    }
+
+    private void updateTypeBadges(boolean isPlayer) {
+        Pokemon pokemon = isPlayer ? playerTeam.get(currentPlayerPokemon) : enemyTeam.get(currentEnemyPokemon);
+        JPanel typePanel = isPlayer ? playerTypePanel : enemyTypePanel;
+
+        if (typePanel != null) {
+            typePanel.removeAll();
+            typePanel.add(createTypeBadge(pokemon.getType1()));
+            if (pokemon.getType2() != null && !pokemon.getType2().isEmpty() && !pokemon.getType2().equals("None")) {
+                typePanel.add(createTypeBadge(pokemon.getType2()));
+            }
+            typePanel.revalidate();
+            typePanel.repaint();
+        }
     }
 
     private void updateTeamSlots() {
@@ -885,8 +990,7 @@ public class EnhancedBattlePanel extends JPanel {
             Component[] components = slot.getComponents();
 
             for (Component c : components) {
-                if (c instanceof JProgressBar) {
-                    JProgressBar hpBar = (JProgressBar) c;
+                if (c instanceof JProgressBar hpBar) {
                     hpBar.setValue(playerCurrentHP[i]);
 
                     if (playerCurrentHP[i] <= 0) {
@@ -909,8 +1013,7 @@ public class EnhancedBattlePanel extends JPanel {
             Component[] components = slot.getComponents();
 
             for (Component c : components) {
-                if (c instanceof JProgressBar) {
-                    JProgressBar hpBar = (JProgressBar) c;
+                if (c instanceof JProgressBar hpBar) {
                     hpBar.setValue(enemyCurrentHP[i]);
 
                     if (enemyCurrentHP[i] <= 0) {
@@ -1034,7 +1137,7 @@ public class EnhancedBattlePanel extends JPanel {
                 button.setBackground(originalColor);
                 button.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(originalColor.darker().darker(), 3, true),
-                    BorderFactory.createEmptyBorder(12, 12, 12, 12)
+                    BorderFactory.createEmptyBorder(10, 10, 10, 10)
                 ));
             }
         }
@@ -1060,7 +1163,7 @@ public class EnhancedBattlePanel extends JPanel {
             button.setBackground(disabledColor);
             button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(80, 80, 80), 3, true),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
             ));
         }
 
@@ -1337,11 +1440,11 @@ public class EnhancedBattlePanel extends JPanel {
 
     private JLabel createTypeBadge(String type) {
         JLabel badge = new JLabel(" " + type.toUpperCase() + " ");
-        badge.setFont(new Font("Arial", Font.BOLD, 11));
+        badge.setFont(new Font("Arial", Font.BOLD, 10));
         badge.setForeground(Color.WHITE);
         badge.setOpaque(true);
         badge.setBackground(getTypeColor(type));
-        badge.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
+        badge.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
         return badge;
     }
 
@@ -1379,7 +1482,9 @@ public class EnhancedBattlePanel extends JPanel {
         }
 
         ImageIcon icon = new ImageIcon(file);
-        Image img = icon.getImage().getScaledInstance(220, 220, Image.SCALE_DEFAULT);
+        // Responsive sprite sizing
+        int spriteSize = Math.min(220, Math.max(150, getWidth() / 6));
+        Image img = icon.getImage().getScaledInstance(spriteSize, spriteSize, Image.SCALE_DEFAULT);
         return new ImageIcon(img);
     }
 
@@ -1397,13 +1502,13 @@ public class EnhancedBattlePanel extends JPanel {
     }
 
     private ImageIcon createPlaceholderSprite() {
-        BufferedImage placeholder = new BufferedImage(220, 220, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage placeholder = new BufferedImage(200, 200, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = placeholder.createGraphics();
         g2d.setColor(new Color(100, 100, 100));
-        g2d.fillOval(50, 50, 120, 120);
+        g2d.fillOval(40, 40, 120, 120);
         g2d.setColor(Color.WHITE);
         g2d.setFont(new Font("Arial", Font.BOLD, 14));
-        g2d.drawString("No Sprite", 70, 115);
+        g2d.drawString("No Sprite", 60, 105);
         g2d.dispose();
         return new ImageIcon(placeholder);
     }
@@ -1436,14 +1541,15 @@ public class EnhancedBattlePanel extends JPanel {
         g2d.setPaint(gp);
         g2d.fillRect(0, 0, getWidth(), getHeight());
 
-        // Battle arena ground
-        g2d.setColor(new Color(106, 168, 79, 120));
-        g2d.fillRect(0, getHeight() / 2 + 50, getWidth(), getHeight() / 2);
+        // Battle arena ground with proper opacity
+        g2d.setColor(new Color(106, 168, 79, 100));
+        int groundY = getHeight() / 2 + 50;
+        g2d.fillRect(0, groundY, getWidth(), getHeight() - groundY);
 
         // Grid lines for depth effect
-        g2d.setColor(new Color(78, 124, 58, 80));
+        g2d.setColor(new Color(78, 124, 58, 60));
         for (int i = 0; i < 8; i++) {
-            int y = getHeight() / 2 + 50 + (i * 40);
+            int y = groundY + (i * 35);
             if (y < getHeight()) {
                 g2d.drawLine(0, y, getWidth(), y);
             }
