@@ -352,6 +352,17 @@ public class User {
             if (rows == 0) {
                 throw new SQLException("Usuário não encontrado.");
             }
+
+            // Delete the user's encryption key file
+            File keyFile = getCryptoKeyFile(username);
+            if (keyFile.exists()) {
+                boolean deleted = keyFile.delete();
+                if (deleted) {
+                    LOGGER.log(Level.INFO, "Chave de criptografia deletada: " + keyFile.getName());
+                } else {
+                    LOGGER.log(Level.WARNING, "Falha ao deletar chave de criptografia: " + keyFile.getName());
+                }
+            }
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Erro ao excluir usuário", ex);
             throw ex;

@@ -51,6 +51,8 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 
+import utils.ReadTextFile;
+
 public class PokedexPanel extends JPanel {
     private static final Logger LOGGER = Logger.getLogger(PokedexPanel.class.getName());
     private static final String IMAGE_DIR = "Images/Image-Pokedex/";
@@ -177,10 +179,25 @@ public class PokedexPanel extends JPanel {
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.weightx = 0.1;
         try {
-            ImageIcon pokeballIcon = new ImageIcon("poke-ball.png");
+            ImageIcon pokeballIcon = new ImageIcon("Images/poke-ball.png");
             Image pokeballImage = pokeballIcon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
             pokeballIcon = new ImageIcon(pokeballImage);
             JLabel pokeballLabel = new JLabel(pokeballIcon);
+
+            // Easter Egg: Triple click on left Poké Ball
+            if (isLeft) {
+                pokeballLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                pokeballLabel.setToolTipText("???");
+                pokeballLabel.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        if (e.getClickCount() == 3) {
+                            showEasterEgg();
+                        }
+                    }
+                });
+            }
+
             panel.add(pokeballLabel, gbc);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Erro ao carregar a imagem poke-ball.png (" + (isLeft ? "esquerda" : "direita") + ")", e);
@@ -414,6 +431,7 @@ public class PokedexPanel extends JPanel {
             SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
         }, "Voltar para a tela de login");
         bottomButtonPanel.add(voltarButton);
+
         bottomPanel.add(bottomButtonPanel, BorderLayout.CENTER);
 
         return bottomPanel;
@@ -676,6 +694,25 @@ public class PokedexPanel extends JPanel {
                 field.setBorder(UIUtils.createRoundedBorder(UIUtils.ERROR_COLOR));
             }
         }
+    }
+
+    /**
+     * Easter Egg: Shows the content of EasterEgg.txt file
+     * Activated by triple-clicking the left Poké Ball
+     */
+    private void showEasterEgg() {
+        LOGGER.log(Level.INFO, "Easter Egg activated by user: " + username);
+
+        String content = ReadTextFile.readEasterEgg();
+
+        JOptionPane.showMessageDialog(
+            this,
+            content,
+            "Easter Egg - Mensagem Secreta!",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+
+        statusBar.setText("Easter Egg encontrado! Parabéns, " + username + "!");
     }
 
     @Override
