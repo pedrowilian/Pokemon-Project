@@ -87,22 +87,23 @@ public class UIUtils {
     }
 
     public static void applyRoundedBorder(JTextField field) {
-        field.setBorder(BorderFactory.createCompoundBorder(
-            createRoundedBorder(new Color(150, 150, 150)),
-            BorderFactory.createEmptyBorder(5, 10, 5, 10)
-        ));
+        field.setBorder(createCompoundRoundedBorder(new Color(150, 150, 150)));
         field.setOpaque(true);
         field.setBackground(Color.WHITE);
+    }
+
+    public static Border createCompoundRoundedBorder(Color color) {
+        return BorderFactory.createCompoundBorder(
+            createRoundedBorder(color),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        );
     }
 
     public static void addFocusEffect(JTextField field, FieldValidator validator) {
         field.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
-                field.setBorder(BorderFactory.createCompoundBorder(
-                    createRoundedBorder(ACCENT_COLOR),
-                    BorderFactory.createEmptyBorder(5, 10, 5, 10)
-                ));
+                field.setBorder(createCompoundRoundedBorder(ACCENT_COLOR));
             }
             @Override
             public void focusLost(FocusEvent e) {

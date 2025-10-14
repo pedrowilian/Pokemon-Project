@@ -3,6 +3,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "ManipulacaoDemo",
+      "request": "launch",
+      "mainClass": "demo.ManipulacaoDemo",
+      "projectName": "your-project-name"
+    },
+    {
+      "type": "java",
       "name": "Main",
       "request": "launch",
       "mainClass": "app.Main",
@@ -46,7 +53,7 @@
         "${workspaceFolder}/bin",
         "${workspaceFolder}/lib/sqlite-jdbc-3.49.1.0.jar"
       ],
-      "cwd": "${workspaceFolder}" // <-- ADD THIS LINE
+      "cwd": "${workspaceFolder}"
     }
   ]
 }

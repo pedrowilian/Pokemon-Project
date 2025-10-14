@@ -85,13 +85,16 @@ public class User {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    byte[] storedPasswordBytes = rs.getBytes("senha");
+                    // Primeiro tenta como string (senha antiga em texto plano)
+                    String storedPasswordText = rs.getString("senha");
 
-                    // Se senha for nula, verifica se é senha antiga em texto plano
-                    if (storedPasswordBytes == null) {
-                        String storedPasswordText = rs.getString("senha");
+                    // Se a senha for uma string normal (não bytes), é senha antiga
+                    File keyFile = getCryptoKeyFile(username);
+                    if (!keyFile.exists()) {
+                        // Não tem chave = usuário antigo com senha em texto plano
                         if (storedPasswordText != null && storedPasswordText.equals(password)) {
                             // Atualiza para senha criptografada
+                            LOGGER.log(Level.INFO, "Migrando senha antiga para CryptoDummy: " + username);
                             updatePasswordWithEncryption(conn, username, password);
                             updateLastLogin(conn, username);
                             return true;
@@ -99,22 +102,29 @@ public class User {
                         return false;
                     }
 
-                    // Verifica senha usando CryptoDummy
-                    File keyFile = getCryptoKeyFile(username);
-                    try {
-                        CryptoDummy crypto = new CryptoDummy();
-                        crypto.geraDecifra(storedPasswordBytes, keyFile);
-                        byte[] decryptedPassword = crypto.getTextoDecifrado();
-                        String decryptedPasswordStr = new String(decryptedPassword);
+                    // Tem chave = tenta decifrar como senha criptografada
+                    byte[] storedPasswordBytes = rs.getBytes("senha");
+                    if (storedPasswordBytes != null && storedPasswordBytes.length > 0) {
+                        try {
+                            CryptoDummy crypto = new CryptoDummy();
+                            crypto.geraDecifra(storedPasswordBytes, keyFile);
+                            byte[] decryptedPassword = crypto.getTextoDecifrado();
+                            String decryptedPasswordStr = new String(decryptedPassword);
 
-                        boolean authenticated = decryptedPasswordStr.equals(password);
-                        if (authenticated) {
-                            updateLastLogin(conn, username);
+                            boolean authenticated = decryptedPasswordStr.equals(password);
+                            if (authenticated) {
+                                updateLastLogin(conn, username);
+                            }
+                            return authenticated;
+                        } catch (Exception ex) {
+                            LOGGER.log(Level.WARNING, "Erro ao decifrar senha, tentando como texto plano", ex);
+                            // Se falhar, tenta como texto plano (fallback)
+                            if (storedPasswordText != null && storedPasswordText.equals(password)) {
+                                updatePasswordWithEncryption(conn, username, password);
+                                updateLastLogin(conn, username);
+                                return true;
+                            }
                         }
-                        return authenticated;
-                    } catch (Exception ex) {
-                        LOGGER.log(Level.WARNING, "Erro ao decifrar senha", ex);
-                        return false;
                     }
                 }
                 return false;
@@ -193,9 +203,22 @@ public class User {
             throw new SQLException("As senhas não coincidem.");
         }
 
+        // IMPORTANTE: Verifica se usuário já existe ANTES de gerar chave
+        String checkSql = "SELECT COUNT(*) FROM usuarios WHERE nome = ?";
+        try (PreparedStatement checkPs = conn.prepareStatement(checkSql)) {
+            checkPs.setString(1, username);
+            try (ResultSet rs = checkPs.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    throw new SQLException("Este nome de usuário já está em uso.");
+                }
+            }
+        }
+
+        // Apenas gera chave depois de confirmar que usuário não existe
+        File keyFile = getCryptoKeyFile(username);
+
         try {
             // Gera chave e criptografa a senha usando CryptoDummy
-            File keyFile = getCryptoKeyFile(username);
             CryptoDummy crypto = new CryptoDummy();
             crypto.geraChave(keyFile);
             crypto.geraCifra(password.getBytes(), keyFile);
@@ -210,12 +233,23 @@ public class User {
                 ps.executeUpdate();
             }
         } catch (SQLException ex) {
+            // Se falhou ao inserir, deleta a chave criada
+            if (keyFile.exists()) {
+                keyFile.delete();
+                LOGGER.log(Level.WARNING, "Chave deletada após falha no registro");
+            }
+
             if (ex.getMessage().contains("UNIQUE constraint failed")) {
                 throw new SQLException("Este nome de usuário já está em uso.");
             }
             LOGGER.log(Level.SEVERE, "Erro ao registrar usuário", ex);
             throw ex;
         } catch (Exception ex) {
+            // Se falhou na criptografia, deleta a chave criada
+            if (keyFile.exists()) {
+                keyFile.delete();
+                LOGGER.log(Level.WARNING, "Chave deletada após falha na criptografia");
+            }
             LOGGER.log(Level.SEVERE, "Erro ao criptografar senha", ex);
             throw new SQLException("Erro ao processar senha.");
         }

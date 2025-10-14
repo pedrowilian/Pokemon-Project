@@ -1,8 +1,9 @@
 GUI\PokedexPanel$AttributeMaxValues.class
-database\DatabaseMigration.class
+GUI\AdminFrame$4.class
 GUI\BattlePanel.class
 GUI\PokedexPanel$2.class
 GUI\PokedexPanel$4.class
+GUI\LoginFrame$2.class
 app\Main.class
 GUI\EnhancedBattlePanel.class
 database\SetupDatabase.class
@@ -12,16 +13,18 @@ GUI\BattlePanel$Attack.class
 GUI\PokedexPanel$ButtonConfig.class
 GUI\LoginFrame.class
 model\Pokemon.class
+GUI\AdminFrame$7.class
 GUI\TeamSelectionPanel$2.class
 GUI\UIUtils.class
-utils\PasswordUtils.class
 GUI\AdminFrame$2.class
+GUI\AdminFrame$5.class
 GUI\EnhancedBattlePanel$2.class
 GUI\PokemonUtils.class
 GUI\UIUtils$1.class
 model\User.class
 GUI\PokedexPanel$3.class
 GUI\PokedexPanel.class
+GUI\LoginFrame$3.class
 GUI\UIUtils$GradientPanel.class
 GUI\EnhancedBattlePanel$1.class
 utils\DateUtils.class
@@ -29,6 +32,8 @@ GUI\BattlePanel$1.class
 GUI\UIUtils$2.class
 GUI\PokedexPanel$1.class
 GUI\AdminFrame$3.class
+GUI\AdminFrame$6.class
+GUI\LoginFrame$1.class
 utils\CryptoDummy.class
 GUI\AdminFrame.class
 database\DatabaseConnection.class
@@ -36,6 +41,5 @@ GUI\EnhancedBattlePanel$3.class
 GUI\PokedexPanel$SliderConfig.class
 GUI\TeamSelectionPanel.class
 GUI\EnhancedBattlePanel$Attack.class
-demo\ManipulacaoDemo.class
 GUI\TeamSelectionPanel$1.class
 GUI\AdminFrame$1.class
