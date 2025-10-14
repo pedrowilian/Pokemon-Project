@@ -116,7 +116,7 @@ public class AdminFrame extends JFrame {
     }
 
     private JScrollPane createTablePane() {
-        String[] columns = {"Usuário", "Admin"};
+        String[] columns = {"Usuário", "Admin", "Último Login", "Criado em"};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -131,8 +131,10 @@ public class AdminFrame extends JFrame {
         userTable.setSelectionBackground(UIUtils.ACCENT_COLOR);
         userTable.setSelectionForeground(Color.WHITE);
         userTable.setBackground(Color.WHITE);
-        userTable.getColumnModel().getColumn(0).setPreferredWidth(250);
-        userTable.getColumnModel().getColumn(1).setPreferredWidth(80);
+        userTable.getColumnModel().getColumn(0).setPreferredWidth(150);
+        userTable.getColumnModel().getColumn(1).setPreferredWidth(60);
+        userTable.getColumnModel().getColumn(2).setPreferredWidth(150);
+        userTable.getColumnModel().getColumn(3).setPreferredWidth(100);
         userTable.getTableHeader().setFont(UIUtils.LABEL_FONT);
         userTable.getTableHeader().setBackground(UIUtils.PRIMARY_COLOR);
         userTable.getTableHeader().setForeground(Color.WHITE);
@@ -273,7 +275,12 @@ public class AdminFrame extends JFrame {
         try {
             ArrayList<User> users = User.getUsers(usersConn, searchTerm);
             for (User user : users) {
-                tableModel.addRow(new Object[]{user.getUsername(), user.isAdmin() ? "Sim" : "Não"});
+                tableModel.addRow(new Object[]{
+                    user.getUsername(),
+                    user.isAdmin() ? "Sim" : "Não",
+                    user.getTimeSinceLastLogin(),
+                    user.getAccountCreatedFormatted()
+                });
             }
             statusLabel.setText("Usuários carregados: " + users.size() + " às " +
                 LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));

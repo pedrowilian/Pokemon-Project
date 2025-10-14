@@ -1,6 +1,8 @@
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\app\Main.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\database\DatabaseConnection.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\database\DatabaseMigration.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\database\SetupDatabase.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\demo\ManipulacaoDemo.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\GUI\AdminFrame.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\GUI\BattlePanel.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\GUI\EnhancedBattlePanel.java
@@ -11,3 +13,6 @@ C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\GUI\TeamSelectionPanel.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\GUI\UIUtils.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\model\Pokemon.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\model\User.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\utils\CryptoDummy.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\utils\DateUtils.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\utils\PasswordUtils.java

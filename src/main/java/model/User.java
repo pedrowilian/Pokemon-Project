@@ -1,20 +1,34 @@
 package model;
 
+import java.io.File;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import utils.CryptoDummy;
+import utils.DateUtils;
 
 public class User {
     private static final Logger LOGGER = Logger.getLogger(User.class.getName());
     private final String username;
     private final String password;
     private final boolean isAdmin;
+    private LocalDateTime lastLogin;
+    private LocalDateTime accountCreated;
 
     public User(String username, String password, boolean isAdmin) {
         this.username = username;
         this.password = password;
         this.isAdmin = isAdmin;
+    }
+
+    public User(String username, String password, boolean isAdmin, LocalDateTime lastLogin, LocalDateTime accountCreated) {
+        this.username = username;
+        this.password = password;
+        this.isAdmin = isAdmin;
+        this.lastLogin = lastLogin;
+        this.accountCreated = accountCreated;
     }
 
     public String getUsername() {
@@ -23,6 +37,26 @@ public class User {
 
     public boolean isAdmin() {
         return isAdmin;
+    }
+
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
+    }
+
+    public LocalDateTime getAccountCreated() {
+        return accountCreated;
+    }
+
+    public String getLastLoginFormatted() {
+        return lastLogin != null ? DateUtils.formatDateTimeBR(lastLogin) : "Nunca";
+    }
+
+    public String getAccountCreatedFormatted() {
+        return accountCreated != null ? DateUtils.formatDateBR(accountCreated.toLocalDate()) : "Desconhecido";
+    }
+
+    public String getTimeSinceLastLogin() {
+        return lastLogin != null ? DateUtils.getTimeAgo(lastLogin) : "nunca";
     }
 
     public static boolean validateUsername(String username) {
@@ -44,15 +78,104 @@ public class User {
         if (!validateUsername(username) || password.isEmpty()) {
             return false;
         }
+
+        // Busca senha do banco
         String sql = "SELECT senha FROM usuarios WHERE nome = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, username);
             try (ResultSet rs = ps.executeQuery()) {
-                return rs.next() && rs.getString("senha").equals(password);
+                if (rs.next()) {
+                    byte[] storedPasswordBytes = rs.getBytes("senha");
+
+                    // Se senha for nula, verifica se é senha antiga em texto plano
+                    if (storedPasswordBytes == null) {
+                        String storedPasswordText = rs.getString("senha");
+                        if (storedPasswordText != null && storedPasswordText.equals(password)) {
+                            // Atualiza para senha criptografada
+                            updatePasswordWithEncryption(conn, username, password);
+                            updateLastLogin(conn, username);
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    // Verifica senha usando CryptoDummy
+                    File keyFile = getCryptoKeyFile(username);
+                    try {
+                        CryptoDummy crypto = new CryptoDummy();
+                        crypto.geraDecifra(storedPasswordBytes, keyFile);
+                        byte[] decryptedPassword = crypto.getTextoDecifrado();
+                        String decryptedPasswordStr = new String(decryptedPassword);
+
+                        boolean authenticated = decryptedPasswordStr.equals(password);
+                        if (authenticated) {
+                            updateLastLogin(conn, username);
+                        }
+                        return authenticated;
+                    } catch (Exception ex) {
+                        LOGGER.log(Level.WARNING, "Erro ao decifrar senha", ex);
+                        return false;
+                    }
+                }
+                return false;
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Erro ao autenticar usuário", ex);
             throw ex;
+        }
+    }
+
+    /**
+     * Atualiza o último login do usuário
+     */
+    private static void updateLastLogin(Connection conn, String username) {
+        String sql = "UPDATE usuarios SET ultimo_login = ? WHERE nome = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, LocalDateTime.now().toString());
+            ps.setString(2, username);
+            ps.executeUpdate();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "Erro ao atualizar último login", ex);
+        }
+    }
+
+    /**
+     * Retorna o arquivo de chave do CryptoDummy para um usuário
+     */
+    private static File getCryptoKeyFile(String username) {
+        File keysDir = new File("keys");
+        if (!keysDir.exists()) {
+            keysDir.mkdirs();
+        }
+        return new File(keysDir, username + ".key");
+    }
+
+    /**
+     * Atualiza senha antiga para formato criptografado
+     */
+    private static void updatePasswordWithEncryption(Connection conn, String username, String password) {
+        try {
+            File keyFile = getCryptoKeyFile(username);
+
+            // Gera chave CryptoDummy se não existir
+            if (!keyFile.exists()) {
+                CryptoDummy crypto = new CryptoDummy();
+                crypto.geraChave(keyFile);
+            }
+
+            // Criptografa a senha
+            CryptoDummy crypto = new CryptoDummy();
+            crypto.geraCifra(password.getBytes(), keyFile);
+            byte[] encryptedPassword = crypto.getTextoCifrado();
+
+            String sql = "UPDATE usuarios SET senha = ? WHERE nome = ?";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setBytes(1, encryptedPassword);
+                ps.setString(2, username);
+                ps.executeUpdate();
+            }
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "Erro ao atualizar senha com criptografia", ex);
         }
     }
 
@@ -69,18 +192,32 @@ public class User {
         if (!password.equals(confirmPassword)) {
             throw new SQLException("As senhas não coincidem.");
         }
-        String sql = "INSERT INTO usuarios (nome, senha, admin) VALUES (?, ?, ?)";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, username);
-            ps.setString(2, password);
-            ps.setInt(3, isAdmin ? 1 : 0);
-            ps.executeUpdate();
+
+        try {
+            // Gera chave e criptografa a senha usando CryptoDummy
+            File keyFile = getCryptoKeyFile(username);
+            CryptoDummy crypto = new CryptoDummy();
+            crypto.geraChave(keyFile);
+            crypto.geraCifra(password.getBytes(), keyFile);
+            byte[] encryptedPassword = crypto.getTextoCifrado();
+
+            String sql = "INSERT INTO usuarios (nome, senha, admin, data_criacao) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, username);
+                ps.setBytes(2, encryptedPassword);
+                ps.setInt(3, isAdmin ? 1 : 0);
+                ps.setString(4, LocalDateTime.now().toString());
+                ps.executeUpdate();
+            }
         } catch (SQLException ex) {
             if (ex.getMessage().contains("UNIQUE constraint failed")) {
                 throw new SQLException("Este nome de usuário já está em uso.");
             }
             LOGGER.log(Level.SEVERE, "Erro ao registrar usuário", ex);
             throw ex;
+        } catch (Exception ex) {
+            LOGGER.log(Level.SEVERE, "Erro ao criptografar senha", ex);
+            throw new SQLException("Erro ao processar senha.");
         }
     }
 
@@ -109,37 +246,66 @@ public class User {
                 }
             }
         }
-        String sql = "UPDATE usuarios SET nome = ?, senha = ?, admin = ? WHERE nome = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, newUsername);
-            ps.setString(2, newPassword.isEmpty() ? getCurrentPassword(conn, currentUsername) : newPassword);
-            ps.setInt(3, isAdmin ? 1 : 0);
-            ps.setString(4, currentUsername);
-            int rows = ps.executeUpdate();
-            if (rows == 0) {
-                throw new SQLException("Usuário não encontrado.");
+
+        try {
+            String sql;
+            PreparedStatement ps;
+
+            // Se a senha foi alterada, criptografa a nova senha
+            if (!newPassword.isEmpty()) {
+                File keyFile = getCryptoKeyFile(newUsername);
+
+                // Gera nova chave se usuário foi renomeado ou chave não existe
+                if (!currentUsername.equals(newUsername) || !keyFile.exists()) {
+                    CryptoDummy crypto = new CryptoDummy();
+                    crypto.geraChave(keyFile);
+                }
+
+                CryptoDummy crypto = new CryptoDummy();
+                crypto.geraCifra(newPassword.getBytes(), keyFile);
+                byte[] encryptedPassword = crypto.getTextoCifrado();
+
+                sql = "UPDATE usuarios SET nome = ?, senha = ?, admin = ? WHERE nome = ?";
+                ps = conn.prepareStatement(sql);
+                ps.setString(1, newUsername);
+                ps.setBytes(2, encryptedPassword);
+                ps.setInt(3, isAdmin ? 1 : 0);
+                ps.setString(4, currentUsername);
+            } else {
+                // Mantém a senha atual
+                sql = "UPDATE usuarios SET nome = ?, admin = ? WHERE nome = ?";
+                ps = conn.prepareStatement(sql);
+                ps.setString(1, newUsername);
+                ps.setInt(2, isAdmin ? 1 : 0);
+                ps.setString(3, currentUsername);
+            }
+
+            try {
+                int rows = ps.executeUpdate();
+                if (rows == 0) {
+                    throw new SQLException("Usuário não encontrado.");
+                }
+
+                // Se usuário foi renomeado, renomeia o arquivo de chave
+                if (!currentUsername.equals(newUsername) && newPassword.isEmpty()) {
+                    File oldKeyFile = getCryptoKeyFile(currentUsername);
+                    File newKeyFile = getCryptoKeyFile(newUsername);
+                    if (oldKeyFile.exists()) {
+                        oldKeyFile.renameTo(newKeyFile);
+                    }
+                }
+            } finally {
+                ps.close();
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Erro ao editar usuário", ex);
             throw ex;
+        } catch (Exception ex) {
+            LOGGER.log(Level.SEVERE, "Erro ao criptografar senha", ex);
+            throw new SQLException("Erro ao processar senha.");
         }
     }
 
-    private static String getCurrentPassword(Connection conn, String username) throws SQLException {
-        if (conn == null) {
-            throw new SQLException("Sem conexão com o banco de dados.");
-        }
-        String sql = "SELECT senha FROM usuarios WHERE nome = ?";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, username);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString("senha");
-                }
-                throw new SQLException("Usuário não encontrado.");
-            }
-        }
-    }
 
     public static void deleteUser(Connection conn, String username) throws SQLException {
         if (conn == null) {
@@ -163,14 +329,40 @@ public class User {
             throw new SQLException("Sem conexão com o banco de dados.");
         }
         ArrayList<User> users = new ArrayList<>();
-        String sql = "SELECT nome, admin FROM usuarios" + (searchTerm != null ? " WHERE nome LIKE ?" : "");
+        String sql = "SELECT nome, admin, ultimo_login, data_criacao FROM usuarios" +
+                     (searchTerm != null ? " WHERE nome LIKE ?" : "");
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             if (searchTerm != null) {
                 ps.setString(1, "%" + searchTerm + "%");
             }
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    users.add(new User(rs.getString("nome"), "", rs.getInt("admin") == 1));
+                    String username = rs.getString("nome");
+                    boolean isAdmin = rs.getInt("admin") == 1;
+
+                    // Parse datas (pode ser null para usuários antigos)
+                    LocalDateTime lastLogin = null;
+                    LocalDateTime accountCreated = null;
+
+                    String lastLoginStr = rs.getString("ultimo_login");
+                    if (lastLoginStr != null && !lastLoginStr.isEmpty()) {
+                        try {
+                            lastLogin = LocalDateTime.parse(lastLoginStr);
+                        } catch (Exception e) {
+                            LOGGER.log(Level.WARNING, "Erro ao parsear data de último login", e);
+                        }
+                    }
+
+                    String accountCreatedStr = rs.getString("data_criacao");
+                    if (accountCreatedStr != null && !accountCreatedStr.isEmpty()) {
+                        try {
+                            accountCreated = LocalDateTime.parse(accountCreatedStr);
+                        } catch (Exception e) {
+                            LOGGER.log(Level.WARNING, "Erro ao parsear data de criação", e);
+                        }
+                    }
+
+                    users.add(new User(username, "", isAdmin, lastLogin, accountCreated));
                 }
             }
         } catch (SQLException ex) {
