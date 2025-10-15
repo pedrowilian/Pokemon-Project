@@ -1620,7 +1620,8 @@ public class EnhancedBattlePanel extends JPanel {
         }
 
         try {
-            // Load GIF from URL - preserves animation
+            // Load GIF from URL - preserves animation WITHOUT scaling
+            // Scaling animated GIFs causes palette/color corruption
             java.net.URL url = f.toURI().toURL();
             ImageIcon originalIcon = new ImageIcon(url);
 
@@ -1633,22 +1634,20 @@ public class EnhancedBattlePanel extends JPanel {
                 return createPlaceholderSprite();
             }
 
-            // SCALE UP THE GIF - make it MASSIVE!
-            // Target size: 400px (much larger than original ~100-200px GIFs)
-            int targetSize = 400;
+            // Set target size to 200px (smaller and cleaner than 400px)
+            int targetSize = 200;
 
             // Calculate scaling while maintaining aspect ratio
             double scale = (double) targetSize / Math.max(originalWidth, originalHeight);
             int scaledWidth = (int) (originalWidth * scale);
             int scaledHeight = (int) (originalHeight * scale);
 
-            // Scale the image
+            // For GIFs, use SCALE_DEFAULT to prevent color corruption
+            // SCALE_DEFAULT doesn't interfere with GIF color palette
             Image scaledImage = originalIcon.getImage().getScaledInstance(
-                scaledWidth, scaledHeight, Image.SCALE_REPLICATE
+                scaledWidth, scaledHeight, Image.SCALE_DEFAULT
             );
 
-            // SCALE_REPLICATE is fastest and works best for GIF animations
-            // It doesn't cause color corruption like other scaling methods
             return new ImageIcon(scaledImage);
 
         } catch (Exception e) {
