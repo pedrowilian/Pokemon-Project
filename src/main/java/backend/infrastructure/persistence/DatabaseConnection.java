@@ -1,4 +1,4 @@
-package database;
+package backend.infrastructure.persistence;
 
 import java.sql.Connection;
 import java.sql.DriverManager;

@@ -72,7 +72,7 @@ public class BattleService {
         if (!effectivenessText.isEmpty()) {
             message += "O ataque " + effectivenessText + "! ";
         }
-        message += "Causou " + actualDamage + " de dano!";
+        message += "Causou " + actualDamage + " de dano! ";
 
         // Check if defender fainted
         if (defender.isFainted()) {

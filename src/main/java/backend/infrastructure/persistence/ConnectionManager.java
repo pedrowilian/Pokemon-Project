@@ -1,7 +1,5 @@
 package backend.infrastructure.persistence;
 
-import database.DatabaseConnection;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.HashMap;
@@ -41,7 +39,7 @@ public class ConnectionManager {
         if (!connections.containsKey(dbName) || connections.get(dbName).isClosed()) {
             Connection conn = DatabaseConnection.connect(dbName);
             connections.put(dbName, conn);
-            LOGGER.log(Level.INFO, "Created new connection to: " + dbName);
+            LOGGER.log(Level.INFO, "Created new connection to: {0}", dbName);
         }
         return connections.get(dbName);
     }
@@ -68,7 +66,7 @@ public class ConnectionManager {
             try {
                 if (!entry.getValue().isClosed()) {
                     entry.getValue().close();
-                    LOGGER.log(Level.INFO, "Closed connection to: " + entry.getKey());
+                    LOGGER.log(Level.INFO, "Closed connection to: {0}", entry.getKey());
                 }
             } catch (SQLException e) {
                 LOGGER.log(Level.WARNING, "Error closing connection to: " + entry.getKey(), e);
