@@ -9,6 +9,7 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import backend.domain.model.BattleState;
@@ -25,10 +26,13 @@ import backend.domain.model.TypeEffectiveness;
 public class BattleService {
     private static final Logger LOGGER = Logger.getLogger(BattleService.class.getName());
     private static final Random random = new Random();
-    private static List<Move> allMoves = new ArrayList<>();
+    private static final List<Move> allMoves = new ArrayList<>();
+    private static JSONObject pokemonMovesData = new JSONObject();
+    private static JSONObject movesStatsData = new JSONObject();
 
     static {
         loadMovesFromJSON();
+        loadPokemonMovesFromJSON();
     }
 
     /**
@@ -116,11 +120,37 @@ public class BattleService {
     }
 
     /**
-     * Generate moves for a Pokemon based on its types
-     * Reuses logic from EnhancedBattlePanel
+     * Generate moves for a Pokemon
+     * First tries to load from movesPokemon.json, then falls back to type-based moves
      */
     public List<Move> generateMovesForPokemon(Pokemon pokemon) {
         List<Move> pokemonMoves = new ArrayList<>();
+
+        // Try to get Pokemon-specific moves from movesPokemon.json
+        try {
+            if (pokemonMovesData.has(pokemon.getName())) {
+                org.json.JSONArray moveNames = pokemonMovesData.getJSONArray(pokemon.getName());
+
+                // Extract all moves from the JSON array (up to 4)
+                for (int i = 0; i < Math.min(4, moveNames.length()); i++) {
+                    String moveName = moveNames.getString(i);
+                    Move move = createMoveFromName(moveName);
+                    pokemonMoves.add(move);
+                }
+
+                // If we got moves from JSON, return them
+                if (!pokemonMoves.isEmpty()) {
+                    LOGGER.log(Level.INFO, "Loaded {0} moves for {1} from movesPokemon.json",
+                              new Object[]{pokemonMoves.size(), pokemon.getName()});
+                    return pokemonMoves;
+                }
+            }
+        } catch (JSONException e) {
+            LOGGER.log(Level.WARNING, "Error loading moves for {0}, using type-based moves", pokemon.getName());
+        }
+
+        // Fallback: Generate moves based on Pokemon's types
+        LOGGER.log(Level.INFO, "Generating type-based moves for {0}", pokemon.getName());
 
         // Add 2 moves of primary type
         List<Move> type1Moves = getMovesOfType(pokemon.getType1());
@@ -144,6 +174,12 @@ public class BattleService {
             }
         }
 
+        // Final fallback: if still no moves, add default moves
+        if (pokemonMoves.isEmpty()) {
+            LOGGER.log(Level.WARNING, "No moves found for {0}, using default Tackle", pokemon.getName());
+            pokemonMoves.add(new Move("Tackle", "Normal", 40, 100));
+        }
+
         return pokemonMoves;
     }
 
@@ -161,17 +197,40 @@ public class BattleService {
     }
 
     /**
+     * Create a Move object from move name, looking up stats from movesStatsData
+     * Falls back to default values if move not found
+     */
+    private static Move createMoveFromName(String moveName) {
+        try {
+            if (movesStatsData.has(moveName)) {
+                JSONObject moveData = movesStatsData.getJSONObject(moveName);
+                String type = moveData.optString("type", "Normal");
+                int power = moveData.optInt("power", 50);
+                int accuracy = moveData.optInt("accuracy", 100);
+                return new Move(moveName, type, power, accuracy);
+            } else {
+                // Move not found in JSON, use default values
+                LOGGER.log(Level.WARNING, "Move ''{0}'' not found in movesData.json, using defaults", moveName);
+                return new Move(moveName, "Normal", 50, 100);
+            }
+        } catch (JSONException e) {
+            LOGGER.log(Level.WARNING, "Error parsing move data for ''{0}'', using defaults", moveName);
+            return new Move(moveName, "Normal", 50, 100);
+        }
+    }
+
+    /**
      * Load moves from JSON file
      * JSON format is an object with move names as keys
      */
     private static void loadMovesFromJSON() {
         try {
             String content = new String(Files.readAllBytes(Paths.get("movesData.json")));
-            JSONObject movesObject = new JSONObject(content);
+            movesStatsData = new JSONObject(content);
 
             // Iterate through all move names in the JSON object
-            for (String moveName : movesObject.keySet()) {
-                JSONObject moveData = movesObject.getJSONObject(moveName);
+            for (String moveName : movesStatsData.keySet()) {
+                JSONObject moveData = movesStatsData.getJSONObject(moveName);
 
                 String type = moveData.getString("type");
                 int power = moveData.optInt("power", 50);
@@ -180,22 +239,38 @@ public class BattleService {
                 allMoves.add(new Move(moveName, type, power, accuracy));
             }
 
-            LOGGER.log(Level.INFO, "Loaded " + allMoves.size() + " moves from JSON");
+            LOGGER.log(Level.INFO, "Loaded {0} moves from movesData.json", allMoves.size());
         } catch (IOException e) {
             LOGGER.log(Level.SEVERE, "Failed to load moves from JSON", e);
             addDefaultMoves();
-        } catch (Exception e) {
+        } catch (JSONException e) {
             LOGGER.log(Level.SEVERE, "Error parsing moves JSON", e);
             addDefaultMoves();
         }
     }
 
+    /**
+     * Load Pokemon-specific moves from movesPokemon.json
+     * JSON format: { "PokemonName": ["Move1", "Move2", "Move3", "Move4"] }
+     */
+    private static void loadPokemonMovesFromJSON() {
+        try {
+            String content = new String(Files.readAllBytes(Paths.get("movesPokemon.json")));
+            pokemonMovesData = new JSONObject(content);
+            LOGGER.log(Level.INFO, "Loaded moves for {0} Pokemon from movesPokemon.json", pokemonMovesData.length());
+        } catch (IOException e) {
+            LOGGER.log(Level.WARNING, "Failed to load movesPokemon.json, will use type-based moves", e);
+        } catch (JSONException e) {
+            LOGGER.log(Level.WARNING, "Error parsing movesPokemon.json, will use type-based moves", e);
+        }
+    }
+
     private static void addDefaultMoves() {
-        allMoves.add(new Move("Tackle", "normal", 40, 100));
-        allMoves.add(new Move("Scratch", "normal", 40, 100));
-        allMoves.add(new Move("Ember", "fire", 40, 100));
-        allMoves.add(new Move("Water Gun", "water", 40, 100));
-        allMoves.add(new Move("Vine Whip", "grass", 45, 100));
+        allMoves.add(new Move("Tackle", "Normal", 40, 100));
+        allMoves.add(new Move("Scratch", "Normal", 40, 100));
+        allMoves.add(new Move("Ember", "Fire", 40, 100));
+        allMoves.add(new Move("Water Gun", "Water", 40, 100));
+        allMoves.add(new Move("Vine Whip", "Grass", 45, 100));
     }
 
     /**

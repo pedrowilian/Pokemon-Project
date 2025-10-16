@@ -91,6 +91,7 @@ public class PokemonService {
      * Get all distinct Pokemon types for UI filters
      * Returns list with "All" as first option
      */
+    @SuppressWarnings("CollectionsToArray")
     public String[] getAllTypes() throws SQLException {
         List<String> types = pokemonRepository.getAllTypes();
         types.add(0, "All");
