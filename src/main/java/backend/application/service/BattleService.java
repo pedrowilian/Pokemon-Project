@@ -95,10 +95,17 @@ public class BattleService {
     }
 
     /**
-     * Switch Pokemon in battle
+     * Switch player Pokemon in battle
      */
-    public boolean switchPokemon(BattleState battle, int index) {
-        return battle.getActiveTeam().switchPokemon(index);
+    public boolean switchPlayerPokemon(BattleState battle, int index) {
+        return battle.getPlayerTeam().switchPokemon(index);
+    }
+
+    /**
+     * Switch enemy Pokemon in battle
+     */
+    public boolean switchEnemyPokemon(BattleState battle, int index) {
+        return battle.getEnemyTeam().switchPokemon(index);
     }
 
     /**

@@ -3,6 +3,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "Main",
+      "request": "launch",
+      "mainClass": "main.java.app.Main",
+      "projectName": "Projeto-Pokemon_7d3280b4"
+    },
+    {
+      "type": "java",
       "name": "LoginFrame",
       "request": "launch",
       "mainClass": "frontend.view.LoginFrame",

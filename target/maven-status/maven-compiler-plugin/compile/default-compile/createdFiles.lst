@@ -64,6 +64,7 @@ frontend\view\AdminFrame$2.class
 frontend\util\UIUtils$FieldValidator.class
 backend\infrastructure\ServiceLocator.class
 frontend\view\PokedexPanel.class
+frontend\view\EnhancedBattlePanel$6.class
 frontend\util\UIUtils$GradientPanel.class
 database\DatabaseConnection.class
 frontend\view\PokedexPanel$ButtonConfig.class

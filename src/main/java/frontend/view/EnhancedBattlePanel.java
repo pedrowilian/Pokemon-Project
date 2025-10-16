@@ -210,6 +210,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         for (int i = 0; i < team.getSize(); i++) {
             PokemonBattleStats pokemonStats = team.getPokemon(i);
+            @SuppressWarnings("unused")
             final int index = i;
 
             JPanel slotContainer = new JPanel(new BorderLayout(0, 0));
@@ -549,10 +550,11 @@ public class EnhancedBattlePanel extends JPanel {
     }
 
     private void executePlayerAttack(Move move) {
-        if (battleEnded || battleState.getCurrentTurn() != BattleState.Turn.PLAYER) {
+        if (battleEnded || battleState.getCurrentTurn() != BattleState.Turn.PLAYER || isProcessing) {
             return;
         }
 
+        isProcessing = true;
         disableControls();
 
         String attackerName = playerTeam.getActivePokemon().getPokemon().getName();
@@ -567,8 +569,10 @@ public class EnhancedBattlePanel extends JPanel {
 
                 showBattleMessage(result.getMessage(), 2000, () -> {
                     if (enemyTeam.getActivePokemon().isFainted()) {
+                        isProcessing = false; // Reset before handling faint
                         handlePokemonFainted(false);
                     } else {
+                        isProcessing = false; // Reset before enemy turn
                         battleState.switchTurn();
                         executeEnemyTurn();
                     }
@@ -578,7 +582,7 @@ public class EnhancedBattlePanel extends JPanel {
     }
 
     private void executeEnemyTurn() {
-        if (battleEnded) {
+        if (battleEnded || isProcessing) {
             return;
         }
 
@@ -587,6 +591,7 @@ public class EnhancedBattlePanel extends JPanel {
             return;
         }
 
+        isProcessing = true;
         // Use BattleService to execute enemy turn
         battleState.setCurrentTurn(BattleState.Turn.ENEMY);
         String attackerName = enemyTeam.getActivePokemon().getPokemon().getName();
@@ -603,8 +608,10 @@ public class EnhancedBattlePanel extends JPanel {
 
                 showBattleMessage(result.getMessage(), 2000, () -> {
                     if (playerTeam.getActivePokemon().isFainted()) {
+                        isProcessing = false; // Reset before handling faint
                         handlePokemonFainted(true);
                     } else {
+                        isProcessing = false; // Reset before player turn
                         battleState.switchTurn();
                         showBattleMessage("What will " + playerTeam.getActivePokemon().getPokemon().getName() + " do?", 1000, () -> {
                             enableControls();
@@ -645,36 +652,102 @@ public class EnhancedBattlePanel extends JPanel {
     }
 
     private void switchPlayerPokemon(int newIndex) {
-        if (!battleService.switchPokemon(battleState, newIndex)) {
+        // Get the OLD pokemon name BEFORE switching
+        String oldPokemonName = playerTeam.getActivePokemon().getPokemon().getName();
+
+        // Use the correct service method for player team
+        if (!battleService.switchPlayerPokemon(battleState, newIndex)) {
             JOptionPane.showMessageDialog(this, "That Pokemon has fainted!", "Cannot Switch", JOptionPane.WARNING_MESSAGE);
+            // Reset processing flag if switch failed
+            isProcessing = false;
             return;
         }
 
         disableControls();
 
-        showBattleMessage(playerTeam.getActivePokemon().getPokemon().getName() + ", come back!", 1500, () -> {
+        showBattleMessage(oldPokemonName + ", come back!", 1500, () -> {
             playerSpriteLabel.setIcon(null);
             playerSpriteLabel.repaint();
 
-            javax.swing.Timer transitionTimer = new javax.swing.Timer(50, evt -> {
-                playerSpriteLabel.setIcon(loadPokemonSprite(playerTeam.getActivePokemon().getPokemon().getId(), false));
-                playerMoves = battleService.generateMovesForPokemon(playerTeam.getActivePokemon().getPokemon());
+            javax.swing.Timer transitionTimer = new javax.swing.Timer(300, evt -> {
+                // Get new active Pokemon after switch
+                PokemonBattleStats newActivePokemon = playerTeam.getActivePokemon();
+
+                // Update sprite with NEW pokemon
+                playerSpriteLabel.setIcon(loadPokemonSprite(newActivePokemon.getPokemon().getId(), false));
+
+                // Generate moves for NEW pokemon
+                playerMoves = battleService.generateMovesForPokemon(newActivePokemon.getPokemon());
+
+                // Update all UI components with new Pokemon data
                 updateAttackButtons();
                 updatePlayerInfo();
                 updateActiveIndicators();
+                updateTeamSlots();
 
                 revalidate();
                 repaint();
 
-                showBattleMessage("Go! " + playerTeam.getActivePokemon().getPokemon().getName() + "!", 1500, () -> {
-                    if (battleState.getCurrentTurn() == BattleState.Turn.ENEMY) {
-                        executeEnemyTurn();
-                    } else {
-                        showBattleMessage("What will " + playerTeam.getActivePokemon().getPokemon().getName() + " do?", 1000, () -> {
-                            enableControls();
-                        });
-                    }
+                isProcessing = false; // Reset processing flag after switch complete
+
+                showBattleMessage("Go! " + newActivePokemon.getPokemon().getName() + "!", 1500, () -> {
+                    // After switching, it should be enemy's turn (switching takes a turn)
+                    battleState.setCurrentTurn(BattleState.Turn.ENEMY);
+                    executeEnemyTurn();
                 });
+            });
+            transitionTimer.setRepeats(false);
+            transitionTimer.start();
+        });
+    }
+
+    /**
+     * Switch player Pokemon after one has fainted (mandatory switch - doesn't consume turn)
+     */
+    private void switchPlayerPokemonAfterFaint(int newIndex) {
+        // Get the OLD pokemon name BEFORE switching (the fainted one)
+        String oldPokemonName = playerTeam.getActivePokemon().getPokemon().getName();
+
+        // Use the correct service method for player team
+        if (!battleService.switchPlayerPokemon(battleState, newIndex)) {
+            JOptionPane.showMessageDialog(this, "That Pokemon has fainted!", "Cannot Switch", JOptionPane.WARNING_MESSAGE);
+            // Reset processing flag if switch failed
+            isProcessing = false;
+            return;
+        }
+
+        disableControls();
+
+        showBattleMessage(oldPokemonName + " has fainted! Go, " + playerTeam.getActivePokemon().getPokemon().getName() + "!", 1500, () -> {
+            playerSpriteLabel.setIcon(null);
+            playerSpriteLabel.repaint();
+
+            javax.swing.Timer transitionTimer = new javax.swing.Timer(300, evt -> {
+                // Get new active Pokemon after switch
+                PokemonBattleStats newActivePokemon = playerTeam.getActivePokemon();
+
+                // Update sprite with NEW pokemon
+                playerSpriteLabel.setIcon(loadPokemonSprite(newActivePokemon.getPokemon().getId(), false));
+
+                // Generate moves for NEW pokemon
+                playerMoves = battleService.generateMovesForPokemon(newActivePokemon.getPokemon());
+
+                // Update all UI components with new Pokemon data
+                updateAttackButtons();
+                updatePlayerInfo();
+                updateActiveIndicators();
+                updateTeamSlots();
+
+                revalidate();
+                repaint();
+
+                isProcessing = false; // Reset processing flag after switch complete
+
+                // After fainted switch, continue with normal turn flow
+                // If it was enemy's turn when player fainted, enemy should go again
+                // If it was player's turn, enemy should get the next turn (since player just lost a Pokemon)
+                battleState.setCurrentTurn(BattleState.Turn.ENEMY);
+                executeEnemyTurn();
             });
             transitionTimer.setRepeats(false);
             transitionTimer.start();
@@ -683,30 +756,43 @@ public class EnhancedBattlePanel extends JPanel {
 
     private void switchEnemyPokemon() {
         if (!enemyTeam.autoSwitchToNextAlive()) {
+            isProcessing = false;
             endBattle(true);
             return;
         }
 
-        showBattleMessage("Rival sent out " + enemyTeam.getActivePokemon().getPokemon().getName() + "!", 2000, () -> {
+        // Get the new active Pokemon after auto-switch
+        PokemonBattleStats newActivePokemon = enemyTeam.getActivePokemon();
+
+        showBattleMessage("Rival sent out " + newActivePokemon.getPokemon().getName() + "!", 2000, () -> {
             enemySpriteLabel.setIcon(null);
             enemySpriteLabel.repaint();
 
-            javax.swing.Timer transitionTimer = new javax.swing.Timer(50, evt -> {
-                enemySpriteLabel.setIcon(loadPokemonSprite(enemyTeam.getActivePokemon().getPokemon().getId(), true));
-                enemyMoves = battleService.generateMovesForPokemon(enemyTeam.getActivePokemon().getPokemon());
+            javax.swing.Timer transitionTimer = new javax.swing.Timer(300, evt -> {
+                // Get current active Pokemon (should be the same as newActivePokemon)
+                PokemonBattleStats currentActive = enemyTeam.getActivePokemon();
+
+                // Update sprite with NEW enemy pokemon
+                enemySpriteLabel.setIcon(loadPokemonSprite(currentActive.getPokemon().getId(), true));
+
+                // Generate moves for NEW enemy pokemon
+                enemyMoves = battleService.generateMovesForPokemon(currentActive.getPokemon());
+
+                // Update all UI components with new enemy Pokemon data
                 updateEnemyInfo();
                 updateActiveIndicators();
+                updateTeamSlots();
 
                 revalidate();
                 repaint();
 
-                if (battleState.getCurrentTurn() == BattleState.Turn.PLAYER) {
-                    showBattleMessage("What will " + playerTeam.getActivePokemon().getPokemon().getName() + " do?", 1000, () -> {
-                        enableControls();
-                    });
-                } else {
-                    executeEnemyTurn();
-                }
+                isProcessing = false; // Reset processing flag
+
+                // After enemy switches due to fainting, it's player's turn
+                battleState.setCurrentTurn(BattleState.Turn.PLAYER);
+                showBattleMessage("What will " + playerTeam.getActivePokemon().getPokemon().getName() + " do?", 1000, () -> {
+                    enableControls();
+                });
             });
             transitionTimer.setRepeats(false);
             transitionTimer.start();
@@ -836,6 +922,136 @@ public class EnhancedBattlePanel extends JPanel {
         dialog.add(scrollPane);
 
         dialog.setVisible(true);
+    }
+
+    /**
+     * Mandatory switch dialog when Pokemon faints - CANNOT be cancelled
+     * This prevents the infinite loop bug
+     */
+    private void showMandatorySwitchDialog() {
+        // Prevent duplicate dialogs
+        if (switchDialog != null && switchDialog.isVisible()) {
+            return;
+        }
+
+        switchDialog = new JDialog(parentFrame, "Pokemon Fainted! Choose Next Pokemon", true);
+        switchDialog.setLayout(new BorderLayout(10, 10));
+        switchDialog.setSize(450, 550);
+        switchDialog.setLocationRelativeTo(this);
+        switchDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE); // Cannot close without selecting
+        switchDialog.getContentPane().setBackground(new Color(45, 52, 90));
+
+        JPanel contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        contentPanel.setOpaque(false);
+
+        JLabel titleLabel = new JLabel("You must choose a Pokemon!");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setForeground(new Color(255, 100, 100));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        contentPanel.add(titleLabel);
+        contentPanel.add(Box.createVerticalStrut(10));
+
+        JLabel subtitleLabel = new JLabel("Click on a healthy Pokemon to continue");
+        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
+        subtitleLabel.setForeground(Color.WHITE);
+        subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        contentPanel.add(subtitleLabel);
+        contentPanel.add(Box.createVerticalStrut(15));
+
+        boolean hasHealthyPokemon = false;
+
+        for (int i = 0; i < playerTeam.getSize(); i++) {
+            if (i == playerTeam.getActivePokemonIndex()) continue;
+
+            final int index = i;
+            PokemonBattleStats stats = playerTeam.getPokemon(i);
+            Pokemon pokemon = stats.getPokemon();
+
+            // Skip fainted Pokemon from being clickable
+            if (stats.isFainted()) continue;
+
+            hasHealthyPokemon = true;
+
+            JPanel pokemonPanel = new JPanel(new BorderLayout(10, 10));
+            pokemonPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(76, 175, 80), 3, true),
+                new EmptyBorder(12, 12, 12, 12)
+            ));
+            pokemonPanel.setBackground(new Color(240, 255, 240));
+            pokemonPanel.setMaximumSize(new Dimension(400, 90));
+
+            JLabel iconLabel = new JLabel(loadPokemonSmallIcon(pokemon.getId()));
+            pokemonPanel.add(iconLabel, BorderLayout.WEST);
+
+            JPanel infoPanel = new JPanel();
+            infoPanel.setLayout(new BoxLayout(infoPanel, BoxLayout.Y_AXIS));
+            infoPanel.setOpaque(false);
+
+            JLabel nameLabel = new JLabel(pokemon.getName());
+            nameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+            infoPanel.add(nameLabel);
+
+            JLabel hpLabel = new JLabel("HP: " + stats.getCurrentHp() + " / " + stats.getMaxHp());
+            hpLabel.setFont(new Font("Arial", Font.PLAIN, 13));
+            infoPanel.add(hpLabel);
+
+            JProgressBar hpBar = new JProgressBar(0, stats.getMaxHp());
+            hpBar.setValue(stats.getCurrentHp());
+            hpBar.setForeground(new Color(76, 175, 80));
+            hpBar.setPreferredSize(new Dimension(220, 18));
+            infoPanel.add(hpBar);
+
+            pokemonPanel.add(infoPanel, BorderLayout.CENTER);
+
+            pokemonPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            pokemonPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    switchDialog.dispose();
+                    switchDialog = null;
+                    // Don't reset isProcessing here - let switchPlayerPokemonAfterFaint handle it
+                    switchPlayerPokemonAfterFaint(index);
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    pokemonPanel.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(255, 215, 0), 4, true),
+                        new EmptyBorder(12, 12, 12, 12)
+                    ));
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    pokemonPanel.setBorder(BorderFactory.createCompoundBorder(
+                        BorderFactory.createLineBorder(new Color(76, 175, 80), 3, true),
+                        new EmptyBorder(12, 12, 12, 12)
+                    ));
+                }
+            });
+
+            contentPanel.add(pokemonPanel);
+            contentPanel.add(Box.createVerticalStrut(10));
+        }
+
+        // Safety check - if no healthy Pokemon, force battle end
+        if (!hasHealthyPokemon) {
+            switchDialog.dispose();
+            switchDialog = null;
+            isProcessing = false;
+            endBattle(false);
+            return;
+        }
+
+        JScrollPane scrollPane = new JScrollPane(contentPanel);
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        switchDialog.add(scrollPane);
+
+        switchDialog.setVisible(true);
     }
 
     private void updateAttackButtons() {
@@ -1115,13 +1331,14 @@ public class EnhancedBattlePanel extends JPanel {
         runButton.setBackground(disabledColor);
     }
 
+    @SuppressWarnings("UseSpecificCatch")
     private ImageIcon loadPokemonSprite(int id, boolean isEnemy) {
         String dir = isEnemy ? FRONT_IMAGE_DIR : BACK_IMAGE_DIR;
         String file = dir + id + ".gif";
         File f = new File(file);
 
         if (!f.exists()) {
-            LOGGER.log(Level.WARNING, "Sprite not found: " + file);
+            LOGGER.log(Level.WARNING, "Sprite not found: {0}", file);
             return createPlaceholderSprite();
         }
 
@@ -1133,7 +1350,7 @@ public class EnhancedBattlePanel extends JPanel {
             int originalHeight = originalIcon.getIconHeight();
 
             if (originalWidth <= 0 || originalHeight <= 0) {
-                LOGGER.log(Level.WARNING, "Invalid sprite dimensions: " + file);
+                LOGGER.log(Level.WARNING, "Invalid sprite dimensions: {0}", file);
                 return createPlaceholderSprite();
             }
 
