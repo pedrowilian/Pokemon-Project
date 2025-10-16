@@ -3,6 +3,13 @@
   "configurations": [
     {
       "type": "java",
+      "name": "LoginFrame",
+      "request": "launch",
+      "mainClass": "frontend.view.LoginFrame",
+      "projectName": "your-project-name"
+    },
+    {
+      "type": "java",
       "name": "ManipulacaoDemo",
       "request": "launch",
       "mainClass": "demo.ManipulacaoDemo",
