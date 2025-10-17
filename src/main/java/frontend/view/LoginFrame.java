@@ -18,6 +18,7 @@ import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -35,8 +36,8 @@ import javax.swing.border.EmptyBorder;
 
 import backend.application.service.UserService;
 import backend.infrastructure.ServiceLocator;
-import shared.util.I18n;
 import frontend.util.UIUtils;
+import shared.util.I18n;
 
 public class LoginFrame extends JFrame {
     private static final Logger LOGGER = Logger.getLogger(LoginFrame.class.getName());
@@ -48,7 +49,7 @@ public class LoginFrame extends JFrame {
     private JPasswordField confirmPassField;
     private JLabel confirmPassLabel;
     private JPanel formPanel;
-    private JButton loginButton, registerButton, clearButton;
+    private JButton loginButton, registerButton, clearButton, backToWelcomeButton;
     private JLabel statusLabel;
     private boolean isRegisterMode = false;
     private Timer shakeTimer;
@@ -250,8 +251,13 @@ public class LoginFrame extends JFrame {
     }
 
     private JPanel createButtonPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 10));
-        panel.setOpaque(false);
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setOpaque(false);
+
+        // First row: Login, Register, and Clear buttons
+        JPanel firstRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 10));
+        firstRow.setOpaque(false);
 
         loginButton = UIUtils.createStyledButton(I18n.get("login.button.login"), e -> {
             if (isRegisterMode) {
@@ -260,7 +266,7 @@ public class LoginFrame extends JFrame {
                 performAction();
             }
         }, I18n.get("login.button.login.tooltip"));
-        panel.add(loginButton);
+        firstRow.add(loginButton);
         getRootPane().setDefaultButton(loginButton);
 
         registerButton = UIUtils.createStyledButton(I18n.get("login.button.register"), e -> {
@@ -270,12 +276,23 @@ public class LoginFrame extends JFrame {
                 performAction();
             }
         }, I18n.get("login.button.register.tooltip"));
-        panel.add(registerButton);
+        firstRow.add(registerButton);
 
         clearButton = UIUtils.createStyledButton(I18n.get("login.button.clear"), e -> clearFields(), I18n.get("login.button.clear.tooltip"));
-        panel.add(clearButton);
+        firstRow.add(clearButton);
 
-        return panel;
+        mainPanel.add(firstRow);
+
+        // Second row: Back to Welcome button (centered)
+        JPanel secondRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 5));
+        secondRow.setOpaque(false);
+
+        backToWelcomeButton = UIUtils.createStyledButton(I18n.get("login.button.backToWelcome"), e -> backToWelcome(), I18n.get("login.button.backToWelcome.tooltip"));
+        secondRow.add(backToWelcomeButton);
+
+        mainPanel.add(secondRow);
+
+        return mainPanel;
     }
 
     private void toggleRegisterMode(boolean enable) {
@@ -393,7 +410,8 @@ public class LoginFrame extends JFrame {
                             showError(I18n.get("login.error.invalidCredentials"), userField, passField);
                         }
                     }
-                } catch (Exception ex) {
+                } catch (InterruptedException | java.util.concurrent.ExecutionException ex) {
+                    LOGGER.log(Level.SEVERE, "Erro ao processar login/registro", ex);
                     showError(I18n.get("login.error.unexpected", ex.getMessage()));
                 } finally {
                     setProcessing(false);
@@ -518,7 +536,7 @@ public class LoginFrame extends JFrame {
     }
 
     private void validateField(JTextField field) {
-        if (isProcessing) return;
+        if (isProcessing || field == null) return;
 
         String text = field instanceof JPasswordField ?
                 new String(((JPasswordField) field).getPassword()) : field.getText();
@@ -554,6 +572,17 @@ public class LoginFrame extends JFrame {
         passField.repaint();
         confirmPassField.revalidate();
         confirmPassField.repaint();
+    }
+
+    private void backToWelcome() {
+        // Close current LoginFrame
+        dispose();
+        
+        // Open WelcomeFrame
+        SwingUtilities.invokeLater(() -> {
+            WelcomeFrame welcomeFrame = new WelcomeFrame();
+            welcomeFrame.setVisible(true);
+        });
     }
 
     private void openPokedex(String username) {

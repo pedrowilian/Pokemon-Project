@@ -1,5 +1,7 @@
 package backend.domain.model;
 
+import shared.util.MoveTranslator;
+
 /**
  * Represents a Pokemon move/attack in battle
  */
@@ -16,8 +18,20 @@ public class Move {
         this.accuracy = accuracy;
     }
 
+    /**
+     * Gets the move name in English (as stored in database/backend)
+     * @return The move name in English
+     */
     public String getName() {
         return name;
+    }
+    
+    /**
+     * Gets the localized move name for UI display
+     * @return The translated move name in current locale
+     */
+    public String getLocalizedName() {
+        return MoveTranslator.translate(name);
     }
 
     public String getType() {

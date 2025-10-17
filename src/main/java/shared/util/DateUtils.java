@@ -221,27 +221,27 @@ public class DateUtils {
      */
     public static String getTimeAgo(LocalDateTime dateTime) {
         if (dateTime == null) {
-            return "nunca";
+            return I18n.get("time.never");
         }
 
         LocalDateTime now = LocalDateTime.now();
 
         long days = daysBetween(dateTime, now);
         if (days > 0) {
-            return days == 1 ? "há 1 dia" : "há " + days + " dias";
+            return days == 1 ? I18n.get("time.dayAgo", days) : I18n.get("time.daysAgo", days);
         }
 
         long hours = hoursBetween(dateTime, now);
         if (hours > 0) {
-            return hours == 1 ? "há 1 hora" : "há " + hours + " horas";
+            return hours == 1 ? I18n.get("time.hourAgo", hours) : I18n.get("time.hoursAgo", hours);
         }
 
         long minutes = minutesBetween(dateTime, now);
         if (minutes > 0) {
-            return minutes == 1 ? "há 1 minuto" : "há " + minutes + " minutos";
+            return minutes == 1 ? I18n.get("time.minuteAgo", minutes) : I18n.get("time.minutesAgo", minutes);
         }
 
-        return "agora mesmo";
+        return I18n.get("time.justNow");
     }
 
     /**

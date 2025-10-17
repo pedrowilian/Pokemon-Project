@@ -10,6 +10,7 @@ frontend\view\EnhancedBattlePanel.class
 frontend\view\TeamSelectionPanel$1.class
 frontend\view\PokemonUtils$2.class
 frontend\view\LoginFrame.class
+frontend\view\WelcomeFrame$2.class
 frontend\view\EnhancedBattlePanel$5.class
 backend\domain\model\PokemonBattleStats.class
 frontend\view\AdminFrame$5.class
@@ -34,6 +35,7 @@ frontend\view\TeamSelectionPanel.class
 backend\infrastructure\database\PokemonRepository.class
 frontend\view\EnhancedBattlePanel$1.class
 frontend\view\LoginFrame$2.class
+shared\util\MoveTranslator.class
 shared\util\ReadTextFile.class
 frontend\view\PokedexPanel$2.class
 backend\application\dto\PokemonDTO.class

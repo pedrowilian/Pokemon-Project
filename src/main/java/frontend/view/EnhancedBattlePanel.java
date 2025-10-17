@@ -560,7 +560,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         String attackerName = playerTeam.getActivePokemon().getPokemon().getName();
 
-        showBattleMessage(I18n.get("battle.message.used", attackerName, move.getName()), 1500, () -> {
+        showBattleMessage(I18n.get("battle.message.used", attackerName, move.getLocalizedName()), 1500, () -> {
             // Use BattleService to execute move
             BattleResult result = battleService.executeMove(battleState, move);
 
@@ -600,7 +600,7 @@ public class EnhancedBattlePanel extends JPanel {
         // Get random move
         Move enemyMove = enemyMoves.get((int) (Math.random() * enemyMoves.size()));
 
-        showBattleMessage(I18n.get("battle.message.usedEnemy", attackerName, enemyMove.getName()), 1500, () -> {
+        showBattleMessage(I18n.get("battle.message.usedEnemy", attackerName, enemyMove.getLocalizedName()), 1500, () -> {
             BattleResult result = battleService.executeMove(battleState, enemyMove);
 
             animateAttack(false, () -> {

@@ -110,6 +110,11 @@ public class I18n {
         }
         currentLocale = locale;
         loadBundle();
+        
+        // Clear translation caches when locale changes
+        TypeTranslator.clearCache();
+        MoveTranslator.clearCache();
+        
         LOGGER.log(Level.INFO, "Locale changed to: {0}", locale);
     }
 

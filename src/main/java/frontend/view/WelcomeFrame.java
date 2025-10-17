@@ -10,6 +10,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,12 +24,13 @@ import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.SwingUtilities;
 
-import shared.util.I18n;
 import frontend.util.UIUtils;
+import shared.util.I18n;
 
 /**
  * Welcome screen that displays when the application starts.
@@ -49,8 +52,25 @@ public class WelcomeFrame extends JFrame {
 
     private void initializeUI() {
         setTitle("Pokémon Game");
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         setResizable(false);
+        
+        // Add window listener for exit confirmation
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                int confirm = JOptionPane.showConfirmDialog(
+                    WelcomeFrame.this,
+                    I18n.get("common.confirm.exit"),
+                    I18n.get("common.confirm.exit.title"),
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+                );
+                if (confirm == JOptionPane.YES_OPTION) {
+                    System.exit(0);
+                }
+            }
+        });
 
         // Create main panel with gradient background
         JPanel mainPanel = new GradientPanel();
@@ -150,9 +170,11 @@ public class WelcomeFrame extends JFrame {
 
         // Hover effect
         startButton.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
             public void mouseEntered(java.awt.event.MouseEvent evt) {
                 startButton.setBackground(UIUtils.ACCENT_COLOR);
             }
+            @Override
             public void mouseExited(java.awt.event.MouseEvent evt) {
                 startButton.setBackground(UIUtils.PRIMARY_COLOR);
             }

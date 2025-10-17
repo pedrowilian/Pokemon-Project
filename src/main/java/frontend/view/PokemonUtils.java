@@ -60,10 +60,13 @@ public class PokemonUtils {
         
         // Translate type to current language
         String translatedType = TypeTranslator.translate(move.getType());
+        
+        // Use localized move name for display
+        String moveName = move.getLocalizedName();
 
         JButton button = new JButton(String.format(
             "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:8px'>PWR: %d | %s</span></div></html>",
-            move.getName(), move.getPower(), translatedType.toUpperCase()));
+            moveName, move.getPower(), translatedType.toUpperCase()));
 
         button.setFont(new Font("Arial", Font.BOLD, 11));
         button.setBackground(typeColor);
@@ -170,10 +173,14 @@ public class PokemonUtils {
      */
     public static void updateAttackButton(JButton button, Move move) {
         Color typeColor = getTypeColor(move.getType());
+        
+        // Translate type and move name to current language
+        String translatedType = TypeTranslator.translate(move.getType());
+        String moveName = move.getLocalizedName();
 
         button.setText(String.format(
             "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:9px'>PWR: %d | %s</span></div></html>",
-            move.getName(), move.getPower(), move.getType().toUpperCase()));
+            moveName, move.getPower(), translatedType.toUpperCase()));
 
         // Update the stored original color
         button.putClientProperty("originalColor", typeColor);

@@ -52,7 +52,7 @@ public class BattleService {
 
         // Check if move hits
         if (!move.hits()) {
-            String message = I18n.get("battle.backend.missed", attacker.getPokemon().getName(), move.getName());
+            String message = I18n.get("battle.backend.missed", attacker.getPokemon().getName(), move.getLocalizedName());
             return new BattleResult(false, 0, message, 1.0);
         }
 
@@ -68,7 +68,7 @@ public class BattleService {
         );
 
         // Build message (without fainted - frontend will handle that)
-        String message = I18n.get("battle.backend.attack", attacker.getPokemon().getName(), move.getName()) + " ";
+        String message = I18n.get("battle.backend.attack", attacker.getPokemon().getName(), move.getLocalizedName()) + " ";
         String effectivenessText = TypeEffectiveness.getEffectivenessText(effectiveness);
         if (!effectivenessText.isEmpty()) {
             message += effectivenessText + "! ";

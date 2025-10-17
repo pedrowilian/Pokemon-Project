@@ -46,8 +46,8 @@ import javax.swing.table.TableRowSorter;
 import backend.application.service.UserService;
 import backend.domain.model.User;
 import backend.infrastructure.ServiceLocator;
-import shared.util.I18n;
 import frontend.util.UIUtils;
+import shared.util.I18n;
 
 public class AdminFrame extends JFrame {
     private static final Logger LOGGER = Logger.getLogger(AdminFrame.class.getName());
@@ -359,7 +359,7 @@ public class AdminFrame extends JFrame {
         usernameField.setFont(UIUtils.FIELD_FONT);
         usernameField.setToolTipText(I18n.get("admin.tooltip.username"));
         UIUtils.applyRoundedBorder(usernameField);
-        if (isEditing) {
+        if (isEditing && user != null) {
             usernameField.setText(user.getUsername());
         }
         formPanel.add(usernameField, gbc);
@@ -390,7 +390,7 @@ public class AdminFrame extends JFrame {
         adminCheckBox.setFont(new Font("Arial", Font.BOLD, 13));
         adminCheckBox.setBackground(UIUtils.BG_COLOR);
         adminCheckBox.setToolTipText(I18n.get("admin.tooltip.admin"));
-        if (isEditing) {
+        if (isEditing && user != null) {
             adminCheckBox.setSelected(user.isAdmin());
         }
         formPanel.add(adminCheckBox, gbc);
@@ -633,11 +633,11 @@ public class AdminFrame extends JFrame {
         if (row == -1) return null;
 
         int modelRow = userTable.convertRowIndexToModel(row);
-        String username = (String) tableModel.getValueAt(modelRow, 0);
+        String userUsername = (String) tableModel.getValueAt(modelRow, 0);
         String typeCell = (String) tableModel.getValueAt(modelRow, 1);
         boolean isAdmin = typeCell.contains("Admin");
 
-        return new User(username, "", isAdmin);
+        return new User(userUsername, "", isAdmin);
     }
 
     private void setProcessing(boolean processing) {

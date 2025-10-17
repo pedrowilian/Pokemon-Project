@@ -214,4 +214,16 @@ public class TypeTranslator {
         }
         return types;
     }
+    
+    /**
+     * Clears all translation caches.
+     * Should be called when the application locale changes to ensure
+     * fresh translations are loaded.
+     * 
+     * @implNote Called by I18n.setLocale() when user changes language
+     */
+    public static void clearCache() {
+        reverseCache.clear();
+        lastLocale = "";
+    }
 }
