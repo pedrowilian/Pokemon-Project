@@ -47,6 +47,7 @@ backend\domain\model\TypeEffectiveness.class
 frontend\view\WelcomeFrame.class
 backend\domain\model\BattleState$BattlePhase.class
 backend\infrastructure\security\PasswordHasher.class
+shared\util\TypeTranslator.class
 backend\application\dto\UserDTO.class
 frontend\view\PokedexPanel$3.class
 backend\network\protocol\Request.class

@@ -51,9 +51,10 @@ import backend.application.service.UserService;
 import backend.domain.model.Pokemon;
 import backend.domain.service.IPokemonRepository.AttributeMaxValues;
 import backend.infrastructure.ServiceLocator;
-import shared.util.I18n;
 import frontend.util.UIUtils;
+import shared.util.I18n;
 import shared.util.ReadTextFile;
+import shared.util.TypeTranslator;
 
 public class PokedexPanel extends JPanel {
     private static final Logger LOGGER = Logger.getLogger(PokedexPanel.class.getName());
@@ -489,7 +490,8 @@ public class PokedexPanel extends JPanel {
 
     private String[] getPokemonTypes() {
         try {
-            return pokemonService.getAllTypes();
+            String[] englishTypes = pokemonService.getAllTypes();
+            return TypeTranslator.translateTypes(englishTypes);
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Erro ao carregar tipos de Pokémon", ex);
             return new String[]{I18n.get("type.all")};
@@ -515,16 +517,18 @@ public class PokedexPanel extends JPanel {
     }
 
     private void applyFilters() {
-        String type = (String) typeFilter.getSelectedItem();
+        String selectedLocalizedType = (String) typeFilter.getSelectedItem();
+        String typeForDB = TypeTranslator.toEnglish(selectedLocalizedType);
+        
         String idText = idField.getText().trim();
         @SuppressWarnings("UnnecessaryTemporaryOnConversionFromString")
         Integer id = idText.isEmpty() ? null : PokemonUtils.isValidId(idText) ? Integer.parseInt(idText) : null;
         if (idText.isEmpty() || id != null) {
-            carregarDados(id, type, hpSlider.getValue(), attackSlider.getValue(),
+            carregarDados(id, typeForDB, hpSlider.getValue(), attackSlider.getValue(),
                 defenseSlider.getValue(), spAtkSlider.getValue(), spDefSlider.getValue(),
                 speedSlider.getValue());
             statusBar.setText(I18n.get("pokedex.status.filtering",
-                type.equals("All") ? "All" : type,
+                selectedLocalizedType != null ? selectedLocalizedType : I18n.get("type.all"),
                 hpSlider.getValue(),
                 attackSlider.getValue(),
                 defenseSlider.getValue(),
@@ -560,8 +564,8 @@ public class PokedexPanel extends JPanel {
         tableModel.setRowCount(0);
 
         try {
-            // Convert "All" to null for the service call
-            String typeFilter = (type != null && type.equals("All")) ? null : type;
+            // Convert "All" to null for the service call (type already in English from applyFilters)
+            String selectedTypeForQuery = (type != null && !type.equalsIgnoreCase("All")) ? type : null;
 
             // Convert 0 values to null (no filter) for the service call
             Integer minHpFilter = minHp > 0 ? minHp : null;
@@ -574,7 +578,7 @@ public class PokedexPanel extends JPanel {
             // Call the service with filters
             List<Pokemon> pokemons = pokemonService.findWithFilters(
                 id,
-                typeFilter,
+                selectedTypeForQuery,
                 minHpFilter, null,      // HP min/max
                 minAttackFilter, null,  // Attack min/max
                 minDefenseFilter, null, // Defense min/max
@@ -592,8 +596,8 @@ public class PokedexPanel extends JPanel {
                     pokemon.getId(),
                     pokemon.getName(),
                     pokemon.getForm(),
-                    pokemon.getType1(),
-                    pokemon.getType2(),
+                    TypeTranslator.translate(pokemon.getType1()),
+                    TypeTranslator.translate(pokemon.getType2()),
                     pokemon.getHp(),
                     pokemon.getAttack(),
                     pokemon.getDefense(),

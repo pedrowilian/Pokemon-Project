@@ -13,6 +13,7 @@ import javax.swing.JButton;
 import javax.swing.JLabel;
 
 import backend.domain.model.Move;
+import shared.util.TypeTranslator;
 
 /**
  * UI utility methods for Pokemon-related components
@@ -34,27 +35,35 @@ public class PokemonUtils {
 
     /**
      * Create a styled type badge (label with background color)
+     * Types are automatically translated to the current language
      */
     public static JLabel createTypeBadge(String type) {
-        JLabel badge = new JLabel(" " + type.toUpperCase() + " ");
+        // Translate type to current language
+        String translatedType = TypeTranslator.translate(type);
+        
+        JLabel badge = new JLabel(" " + translatedType.toUpperCase() + " ");
         badge.setFont(new Font("Arial", Font.BOLD, 10));
         badge.setForeground(Color.WHITE);
         badge.setOpaque(true);
-        badge.setBackground(getTypeColor(type));
+        badge.setBackground(getTypeColor(type)); // Use original type for color
         badge.setBorder(BorderFactory.createEmptyBorder(2, 6, 2, 6));
         return badge;
     }
 
     /**
      * Create a styled attack button for battle UI
+     * Types are automatically translated to the current language
      */
     public static JButton createAttackButton(Move move, ActionListener listener) {
         Color typeColor = getTypeColor(move.getType());
         Color disabledColor = new Color(120, 120, 120);
+        
+        // Translate type to current language
+        String translatedType = TypeTranslator.translate(move.getType());
 
         JButton button = new JButton(String.format(
             "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:8px'>PWR: %d | %s</span></div></html>",
-            move.getName(), move.getPower(), move.getType().toUpperCase()));
+            move.getName(), move.getPower(), translatedType.toUpperCase()));
 
         button.setFont(new Font("Arial", Font.BOLD, 11));
         button.setBackground(typeColor);
