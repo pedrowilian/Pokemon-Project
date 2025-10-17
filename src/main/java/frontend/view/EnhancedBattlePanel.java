@@ -49,6 +49,7 @@ import backend.domain.model.Pokemon;
 import backend.domain.model.PokemonBattleStats;
 import backend.domain.model.Team;
 import backend.infrastructure.ServiceLocator;
+import shared.util.I18n;
 
 /**
  * Clean architecture battle panel - PRESENTATION LAYER ONLY
@@ -199,7 +200,7 @@ public class EnhancedBattlePanel extends JPanel {
         ));
         barPanel.setPreferredSize(new Dimension(110, 0));
 
-        JLabel titleLabel = new JLabel(isPlayer ? "YOUR TEAM" : "ENEMY TEAM", SwingConstants.CENTER);
+        JLabel titleLabel = new JLabel(isPlayer ? I18n.get("battle.team.your") : I18n.get("battle.team.enemy"), SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 11));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -266,7 +267,7 @@ public class EnhancedBattlePanel extends JPanel {
             hpBar.setAlignmentX(Component.CENTER_ALIGNMENT);
             slot.add(hpBar);
 
-            JLabel activeIndicator = new JLabel("★ ACTIVE ★", SwingConstants.CENTER);
+            JLabel activeIndicator = new JLabel(I18n.get("battle.label.active"), SwingConstants.CENTER);
             activeIndicator.setFont(new Font("Arial", Font.BOLD, 8));
             activeIndicator.setForeground(new Color(255, 215, 0));
             activeIndicator.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -328,7 +329,7 @@ public class EnhancedBattlePanel extends JPanel {
         nameLabel.setForeground(Color.WHITE);
         headerPanel.add(nameLabel);
 
-        JLabel levelLabel = new JLabel(" LV.50 ");
+        JLabel levelLabel = new JLabel(I18n.get("battle.label.level"));
         levelLabel.setFont(new Font("Arial", Font.BOLD, 8));
         levelLabel.setForeground(Color.WHITE);
         levelLabel.setOpaque(true);
@@ -346,7 +347,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         card.add(Box.createVerticalStrut(3));
 
-        JLabel hpLabel = new JLabel("HP: " + stats.getCurrentHp() + " / " + stats.getMaxHp());
+        JLabel hpLabel = new JLabel(I18n.get("battle.label.hp", stats.getCurrentHp(), stats.getMaxHp()));
         hpLabel.setFont(new Font("Arial", Font.BOLD, 11));
         hpLabel.setForeground(Color.WHITE);
         hpLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -500,11 +501,11 @@ public class EnhancedBattlePanel extends JPanel {
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
         actionPanel.setOpaque(false);
 
-        switchButton = PokemonUtils.createActionButton("SWITCH POKEMON", new Color(52, 152, 219));
+        switchButton = PokemonUtils.createActionButton(I18n.get("battle.button.switch"), new Color(52, 152, 219));
         switchButton.addActionListener(e -> showSwitchDialog());
         actionPanel.add(switchButton);
 
-        runButton = PokemonUtils.createActionButton("RUN", new Color(231, 76, 60));
+        runButton = PokemonUtils.createActionButton(I18n.get("battle.button.run"), new Color(231, 76, 60));
         runButton.addActionListener(e -> endBattle(false));
         actionPanel.add(runButton);
 
@@ -515,15 +516,15 @@ public class EnhancedBattlePanel extends JPanel {
 
     private void startBattle() {
         SwingUtilities.invokeLater(() -> {
-            showBattleMessage("A rival trainer wants to battle!", 2000, () -> {
-                showBattleMessage("Rival sent out " + enemyTeam.getActivePokemon().getPokemon().getName() + "!", 2000, () -> {
-                    showBattleMessage("Go! " + playerTeam.getActivePokemon().getPokemon().getName() + "!", 2000, () -> {
+            showBattleMessage(I18n.get("battle.message.trainerWants"), 2000, () -> {
+                showBattleMessage(I18n.get("battle.message.sentOut", enemyTeam.getActivePokemon().getPokemon().getName()), 2000, () -> {
+                    showBattleMessage(I18n.get("battle.message.go", playerTeam.getActivePokemon().getPokemon().getName()), 2000, () -> {
                         if (battleState.getCurrentTurn() == BattleState.Turn.ENEMY) {
-                            showBattleMessage("Enemy " + enemyTeam.getActivePokemon().getPokemon().getName() + " will attack first!", 2000, () -> {
+                            showBattleMessage(I18n.get("battle.message.willAttackFirst", enemyTeam.getActivePokemon().getPokemon().getName()), 2000, () -> {
                                 executeEnemyTurn();
                             });
                         } else {
-                            showBattleMessage("What will " + playerTeam.getActivePokemon().getPokemon().getName() + " do?", 1000, () -> {
+                            showBattleMessage(I18n.get("battle.message.whatWillDo", playerTeam.getActivePokemon().getPokemon().getName()), 1000, () -> {
                                 enableControls();
                             });
                         }
@@ -559,7 +560,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         String attackerName = playerTeam.getActivePokemon().getPokemon().getName();
 
-        showBattleMessage(attackerName + " used " + move.getName() + "!", 1500, () -> {
+        showBattleMessage(I18n.get("battle.message.used", attackerName, move.getName()), 1500, () -> {
             // Use BattleService to execute move
             BattleResult result = battleService.executeMove(battleState, move);
 
@@ -599,7 +600,7 @@ public class EnhancedBattlePanel extends JPanel {
         // Get random move
         Move enemyMove = enemyMoves.get((int) (Math.random() * enemyMoves.size()));
 
-        showBattleMessage("Enemy " + attackerName + " used " + enemyMove.getName() + "!", 1500, () -> {
+        showBattleMessage(I18n.get("battle.message.usedEnemy", attackerName, enemyMove.getName()), 1500, () -> {
             BattleResult result = battleService.executeMove(battleState, enemyMove);
 
             animateAttack(false, () -> {
@@ -613,7 +614,7 @@ public class EnhancedBattlePanel extends JPanel {
                     } else {
                         isProcessing = false; // Reset before player turn
                         battleState.switchTurn();
-                        showBattleMessage("What will " + playerTeam.getActivePokemon().getPokemon().getName() + " do?", 1000, () -> {
+                        showBattleMessage(I18n.get("battle.message.whatWillDo", playerTeam.getActivePokemon().getPokemon().getName()), 1000, () -> {
                             enableControls();
                         });
                     }
@@ -631,7 +632,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         PokemonBattleStats fainted = isPlayer ? playerTeam.getActivePokemon() : enemyTeam.getActivePokemon();
 
-        showBattleMessage(fainted.getPokemon().getName() + " fainted!", 2000, () -> {
+        showBattleMessage(I18n.get("battle.message.fainted", fainted.getPokemon().getName()), 2000, () -> {
             if (isPlayer) {
                 if (playerTeam.isDefeated()) {
                     isProcessing = false;
@@ -657,7 +658,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         // Use the correct service method for player team
         if (!battleService.switchPlayerPokemon(battleState, newIndex)) {
-            JOptionPane.showMessageDialog(this, "That Pokemon has fainted!", "Cannot Switch", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.get("battle.error.pokemonFainted"), I18n.get("battle.error.cannotSwitch"), JOptionPane.WARNING_MESSAGE);
             // Reset processing flag if switch failed
             isProcessing = false;
             return;
@@ -665,7 +666,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         disableControls();
 
-        showBattleMessage(oldPokemonName + ", come back!", 1500, () -> {
+        showBattleMessage(I18n.get("battle.message.comeBack", oldPokemonName), 1500, () -> {
             playerSpriteLabel.setIcon(null);
             playerSpriteLabel.repaint();
 
@@ -690,7 +691,7 @@ public class EnhancedBattlePanel extends JPanel {
 
                 isProcessing = false; // Reset processing flag after switch complete
 
-                showBattleMessage("Go! " + newActivePokemon.getPokemon().getName() + "!", 1500, () -> {
+                showBattleMessage(I18n.get("battle.message.go", newActivePokemon.getPokemon().getName()), 1500, () -> {
                     // After switching, it should be enemy's turn (switching takes a turn)
                     battleState.setCurrentTurn(BattleState.Turn.ENEMY);
                     executeEnemyTurn();
@@ -710,7 +711,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         // Use the correct service method for player team
         if (!battleService.switchPlayerPokemon(battleState, newIndex)) {
-            JOptionPane.showMessageDialog(this, "That Pokemon has fainted!", "Cannot Switch", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.get("battle.error.pokemonFainted"), I18n.get("battle.error.cannotSwitch"), JOptionPane.WARNING_MESSAGE);
             // Reset processing flag if switch failed
             isProcessing = false;
             return;
@@ -718,7 +719,7 @@ public class EnhancedBattlePanel extends JPanel {
 
         disableControls();
 
-        showBattleMessage(oldPokemonName + " has fainted! Go, " + playerTeam.getActivePokemon().getPokemon().getName() + "!", 1500, () -> {
+        showBattleMessage(I18n.get("battle.message.goAfterFaint", oldPokemonName, playerTeam.getActivePokemon().getPokemon().getName()), 1500, () -> {
             playerSpriteLabel.setIcon(null);
             playerSpriteLabel.repaint();
 
@@ -764,7 +765,7 @@ public class EnhancedBattlePanel extends JPanel {
         // Get the new active Pokemon after auto-switch
         PokemonBattleStats newActivePokemon = enemyTeam.getActivePokemon();
 
-        showBattleMessage("Rival sent out " + newActivePokemon.getPokemon().getName() + "!", 2000, () -> {
+        showBattleMessage(I18n.get("battle.message.sentOut", newActivePokemon.getPokemon().getName()), 2000, () -> {
             enemySpriteLabel.setIcon(null);
             enemySpriteLabel.repaint();
 
@@ -790,7 +791,7 @@ public class EnhancedBattlePanel extends JPanel {
 
                 // After enemy switches due to fainting, it's player's turn
                 battleState.setCurrentTurn(BattleState.Turn.PLAYER);
-                showBattleMessage("What will " + playerTeam.getActivePokemon().getPokemon().getName() + " do?", 1000, () -> {
+                showBattleMessage(I18n.get("battle.message.whatWillDo", playerTeam.getActivePokemon().getPokemon().getName()), 1000, () -> {
                     enableControls();
                 });
             });
@@ -822,7 +823,7 @@ public class EnhancedBattlePanel extends JPanel {
     }
 
     private void showSwitchDialog() {
-        JDialog dialog = new JDialog(parentFrame, "Switch Pokemon", true);
+        JDialog dialog = new JDialog(parentFrame, I18n.get("battle.dialog.switch"), true);
         dialog.setLayout(new BorderLayout(10, 10));
         dialog.setSize(450, 550);
         dialog.setLocationRelativeTo(this);
@@ -833,7 +834,7 @@ public class EnhancedBattlePanel extends JPanel {
         contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         contentPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("Choose a Pokemon to switch to:");
+        JLabel titleLabel = new JLabel(I18n.get("battle.dialog.chooseSwitch"));
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -866,7 +867,7 @@ public class EnhancedBattlePanel extends JPanel {
             nameLabel.setFont(new Font("Arial", Font.BOLD, 16));
             infoPanel.add(nameLabel);
 
-            JLabel hpLabel = new JLabel("HP: " + stats.getCurrentHp() + " / " + stats.getMaxHp());
+            JLabel hpLabel = new JLabel(I18n.get("battle.label.hp", stats.getCurrentHp(), stats.getMaxHp()));
             hpLabel.setFont(new Font("Arial", Font.PLAIN, 13));
             infoPanel.add(hpLabel);
 
@@ -909,7 +910,7 @@ public class EnhancedBattlePanel extends JPanel {
             contentPanel.add(Box.createVerticalStrut(10));
         }
 
-        JButton cancelButton = PokemonUtils.createActionButton("CANCEL", new Color(231, 76, 60));
+        JButton cancelButton = PokemonUtils.createActionButton(I18n.get("battle.button.cancel"), new Color(231, 76, 60));
         cancelButton.addActionListener(e -> dialog.dispose());
         cancelButton.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(Box.createVerticalStrut(10));
@@ -934,7 +935,7 @@ public class EnhancedBattlePanel extends JPanel {
             return;
         }
 
-        switchDialog = new JDialog(parentFrame, "Pokemon Fainted! Choose Next Pokemon", true);
+        switchDialog = new JDialog(parentFrame, I18n.get("battle.dialog.switchMandatory"), true);
         switchDialog.setLayout(new BorderLayout(10, 10));
         switchDialog.setSize(450, 550);
         switchDialog.setLocationRelativeTo(this);
@@ -946,14 +947,14 @@ public class EnhancedBattlePanel extends JPanel {
         contentPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
         contentPanel.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("You must choose a Pokemon!");
+        JLabel titleLabel = new JLabel(I18n.get("battle.dialog.mustChoose"));
         titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
         titleLabel.setForeground(new Color(255, 100, 100));
         titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         contentPanel.add(titleLabel);
         contentPanel.add(Box.createVerticalStrut(10));
 
-        JLabel subtitleLabel = new JLabel("Click on a healthy Pokemon to continue");
+        JLabel subtitleLabel = new JLabel(I18n.get("battle.dialog.clickHealthy"));
         subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         subtitleLabel.setForeground(Color.WHITE);
         subtitleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -993,7 +994,7 @@ public class EnhancedBattlePanel extends JPanel {
             nameLabel.setFont(new Font("Arial", Font.BOLD, 16));
             infoPanel.add(nameLabel);
 
-            JLabel hpLabel = new JLabel("HP: " + stats.getCurrentHp() + " / " + stats.getMaxHp());
+            JLabel hpLabel = new JLabel(I18n.get("battle.label.hp", stats.getCurrentHp(), stats.getMaxHp()));
             hpLabel.setFont(new Font("Arial", Font.PLAIN, 13));
             infoPanel.add(hpLabel);
 
@@ -1075,7 +1076,7 @@ public class EnhancedBattlePanel extends JPanel {
         PokemonBattleStats stats = playerTeam.getActivePokemon();
         Pokemon pokemon = stats.getPokemon();
         playerNameLabel.setText(pokemon.getName().toUpperCase());
-        playerHPLabel.setText("HP: " + stats.getCurrentHp() + " / " + stats.getMaxHp());
+        playerHPLabel.setText(I18n.get("battle.label.hp", stats.getCurrentHp(), stats.getMaxHp()));
         playerHealthBar.setMaximum(stats.getMaxHp());
         playerHealthBar.setValue(stats.getCurrentHp());
         updateHealthBar(true);
@@ -1091,7 +1092,7 @@ public class EnhancedBattlePanel extends JPanel {
         PokemonBattleStats stats = enemyTeam.getActivePokemon();
         Pokemon pokemon = stats.getPokemon();
         enemyNameLabel.setText(pokemon.getName().toUpperCase());
-        enemyHPLabel.setText("HP: " + stats.getCurrentHp() + " / " + stats.getMaxHp());
+        enemyHPLabel.setText(I18n.get("battle.label.hp", stats.getCurrentHp(), stats.getMaxHp()));
         enemyHealthBar.setMaximum(stats.getMaxHp());
         enemyHealthBar.setValue(stats.getCurrentHp());
         updateHealthBar(false);
@@ -1195,7 +1196,7 @@ public class EnhancedBattlePanel extends JPanel {
             playerHealthBar.setValue(current);
             double percentage = stats.getHpPercentage() * 100;
             playerHealthBar.setString(String.format("%.0f%%", percentage));
-            playerHPLabel.setText("HP: " + current + " / " + max);
+            playerHPLabel.setText(I18n.get("battle.label.hp", current, max));
 
             if (stats.getHpPercentage() < 0.2) {
                 playerHealthBar.setForeground(new Color(220, 20, 60));
@@ -1211,7 +1212,7 @@ public class EnhancedBattlePanel extends JPanel {
             enemyHealthBar.setValue(current);
             double percentage = stats.getHpPercentage() * 100;
             enemyHealthBar.setString(String.format("%.0f%%", percentage));
-            enemyHPLabel.setText("HP: " + current + " / " + max);
+            enemyHPLabel.setText(I18n.get("battle.label.hp", current, max));
 
             if (stats.getHpPercentage() < 0.2) {
                 enemyHealthBar.setForeground(new Color(220, 20, 60));
@@ -1270,17 +1271,17 @@ public class EnhancedBattlePanel extends JPanel {
         disableControls();
 
         if (playerWon) {
-            showBattleMessage("VICTORY! You defeated the Rival!", 3000, () -> {
+            showBattleMessage(I18n.get("battle.message.victory"), 3000, () -> {
                 JOptionPane.showMessageDialog(this,
-                    "CONGRATULATIONS!\n\nYou have defeated your rival!\n\nYou are the Champion!",
-                    "VICTORY", JOptionPane.INFORMATION_MESSAGE);
+                    I18n.get("battle.victory.message"),
+                    I18n.get("battle.victory.title"), JOptionPane.INFORMATION_MESSAGE);
                 returnToPokedex();
             });
         } else {
-            showBattleMessage("DEFEAT! All your Pokemon fainted!", 3000, () -> {
+            showBattleMessage(I18n.get("battle.message.defeat"), 3000, () -> {
                 JOptionPane.showMessageDialog(this,
-                    "Oh no!\n\nAll your Pokemon have fainted!\n\nDon't give up, Trainer!",
-                    "Defeat", JOptionPane.WARNING_MESSAGE);
+                    I18n.get("battle.defeat.message"),
+                    I18n.get("battle.defeat.title"), JOptionPane.WARNING_MESSAGE);
                 returnToPokedex();
             });
         }

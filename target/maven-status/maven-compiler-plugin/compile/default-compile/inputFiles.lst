@@ -18,12 +18,12 @@ C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\domain\service\IUse
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\infrastructure\database\PokemonRepository.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\infrastructure\database\UserRepository.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\infrastructure\persistence\ConnectionManager.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\infrastructure\persistence\DatabaseConnection.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\infrastructure\security\PasswordHasher.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\infrastructure\ServiceLocator.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\network\protocol\Request.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\backend\network\protocol\Response.java
-C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\database\DatabaseConnection.java
-C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\database\SetupDatabase.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\util\LanguageSelectorComponent.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\util\UIUtils.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\view\AdminFrame.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\view\EnhancedBattlePanel.java
@@ -31,6 +31,8 @@ C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\view\LoginFrame.ja
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\view\PokedexPanel.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\view\PokemonUtils.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\view\TeamSelectionPanel.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\frontend\view\WelcomeFrame.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\shared\util\CryptoDummy.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\shared\util\DateUtils.java
+C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\shared\util\I18n.java
 C:\Users\pedro\Desktop\Projeto-Pokemon\src\main\java\shared\util\ReadTextFile.java

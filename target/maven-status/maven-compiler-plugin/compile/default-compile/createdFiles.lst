@@ -24,6 +24,7 @@ frontend\view\TeamSelectionPanel$2.class
 frontend\view\PokedexPanel$5.class
 shared\util\DateUtils.class
 frontend\view\EnhancedBattlePanel$4.class
+shared\util\I18n.class
 frontend\view\PokedexPanel$SliderConfig.class
 frontend\util\UIUtils.class
 shared\util\CryptoDummy.class
@@ -43,14 +44,16 @@ backend\application\service\BattleService$BattleResult.class
 backend\application\service\TeamService.class
 frontend\view\EnhancedBattlePanel$3.class
 backend\domain\model\TypeEffectiveness.class
+frontend\view\WelcomeFrame.class
 backend\domain\model\BattleState$BattlePhase.class
 backend\infrastructure\security\PasswordHasher.class
-database\SetupDatabase.class
 backend\application\dto\UserDTO.class
 frontend\view\PokedexPanel$3.class
 backend\network\protocol\Request.class
 frontend\view\AdminFrame$3.class
+frontend\view\WelcomeFrame$1.class
 backend\network\protocol\Response.class
+frontend\util\LanguageSelectorComponent.class
 backend\domain\model\BattleState.class
 backend\application\service\PokemonService.class
 frontend\view\PokemonUtils.class
@@ -58,6 +61,8 @@ frontend\util\UIUtils$3.class
 frontend\view\LoginFrame$3.class
 backend\domain\model\Move.class
 backend\domain\service\IUserRepository.class
+frontend\view\WelcomeFrame$GradientPanel.class
+backend\infrastructure\persistence\DatabaseConnection.class
 backend\domain\model\Team.class
 backend\domain\service\IPokemonRepository.class
 frontend\view\AdminFrame$2.class
@@ -66,7 +71,6 @@ backend\infrastructure\ServiceLocator.class
 frontend\view\PokedexPanel.class
 frontend\view\EnhancedBattlePanel$6.class
 frontend\util\UIUtils$GradientPanel.class
-database\DatabaseConnection.class
 frontend\view\PokedexPanel$ButtonConfig.class
 backend\infrastructure\persistence\ConnectionManager.class
 backend\application\service\UserService.class

@@ -18,6 +18,7 @@ import backend.domain.model.Pokemon;
 import backend.domain.model.PokemonBattleStats;
 import backend.domain.model.Team;
 import backend.domain.model.TypeEffectiveness;
+import shared.util.I18n;
 
 /**
  * Battle service - handles all battle logic
@@ -51,7 +52,7 @@ public class BattleService {
 
         // Check if move hits
         if (!move.hits()) {
-            String message = attacker.getPokemon().getName() + " usou " + move.getName() + ", mas errou!";
+            String message = I18n.get("battle.backend.missed", attacker.getPokemon().getName(), move.getName());
             return new BattleResult(false, 0, message, 1.0);
         }
 
@@ -66,17 +67,16 @@ public class BattleService {
             defender.getPokemon().getType2()
         );
 
-        // Build message
-        String message = attacker.getPokemon().getName() + " usou " + move.getName() + "! ";
+        // Build message (without fainted - frontend will handle that)
+        String message = I18n.get("battle.backend.attack", attacker.getPokemon().getName(), move.getName()) + " ";
         String effectivenessText = TypeEffectiveness.getEffectivenessText(effectiveness);
         if (!effectivenessText.isEmpty()) {
-            message += "O ataque " + effectivenessText + "! ";
+            message += effectivenessText + "! ";
         }
-        message += "Causou " + actualDamage + " de dano! ";
+        message += I18n.get("battle.backend.damage", actualDamage);
 
-        // Check if defender fainted
+        // Check if defender fainted (but don't add to message - frontend handles this)
         if (defender.isFainted()) {
-            message += "\n" + defender.getPokemon().getName() + " desmaiou!";
             battle.setPhase(BattleState.BattlePhase.POKEMON_FAINTED);
         }
 

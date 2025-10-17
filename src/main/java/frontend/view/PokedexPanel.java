@@ -51,6 +51,7 @@ import backend.application.service.UserService;
 import backend.domain.model.Pokemon;
 import backend.domain.service.IPokemonRepository.AttributeMaxValues;
 import backend.infrastructure.ServiceLocator;
+import shared.util.I18n;
 import frontend.util.UIUtils;
 import shared.util.ReadTextFile;
 
@@ -150,7 +151,7 @@ public class PokedexPanel extends JPanel {
         gbc.anchor = GridBagConstraints.CENTER;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.weightx = 0.2;
-        controlPanel.add(UIUtils.createLabel("ID:"), gbc);
+        controlPanel.add(UIUtils.createLabel(I18n.get("pokedex.label.id")), gbc);
 
         gbc.gridx = 2;
         idField = createIdField();
@@ -158,7 +159,7 @@ public class PokedexPanel extends JPanel {
 
         // Type filter and label
         gbc.gridx = 3;
-        controlPanel.add(UIUtils.createLabel("Type:"), gbc);
+        controlPanel.add(UIUtils.createLabel(I18n.get("pokedex.label.type")), gbc);
 
         gbc.gridx = 4;
         typeFilter = createTypeFilter();
@@ -188,7 +189,7 @@ public class PokedexPanel extends JPanel {
             // Easter Egg: Triple click on left Poké Ball
             if (isLeft) {
                 pokeballLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-                pokeballLabel.setToolTipText("???");
+                pokeballLabel.setToolTipText(I18n.get("pokedex.tooltip.pokeball"));
                 pokeballLabel.addMouseListener(new MouseAdapter() {
                     @Override
                     public void mouseClicked(MouseEvent e) {
@@ -202,21 +203,21 @@ public class PokedexPanel extends JPanel {
             panel.add(pokeballLabel, gbc);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Erro ao carregar a imagem poke-ball.png (" + (isLeft ? "esquerda" : "direita") + ")", e);
-            showError("Erro ao carregar a imagem Poké Ball (" + (isLeft ? "esquerda" : "direita") + "). Verifique se o arquivo 'poke-ball.png' está no diretório do projeto.");
+            showError(I18n.get("pokedex.error.loadImage", isLeft ? "esquerda" : "direita"));
         }
     }
 
     private JPanel createTopRightPanel() {
         JPanel topRightPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         topRightPanel.setOpaque(false);
-        adminStatusLabel = UIUtils.createLabel("Modo: " + (isAdmin ? "Admin" : "Usuário"));
+        adminStatusLabel = UIUtils.createLabel(isAdmin ? I18n.get("pokedex.mode.admin") : I18n.get("pokedex.mode.user"));
         topRightPanel.add(adminStatusLabel);
 
         if (isAdmin) {
-            adminButton = UIUtils.createStyledButton("Usuários", e -> {
+            adminButton = UIUtils.createStyledButton(I18n.get("pokedex.button.users"), e -> {
                 parentFrame.dispose();
                 SwingUtilities.invokeLater(() -> new AdminFrame(username).setVisible(true));
-            }, "Acessar painel de administração");
+            }, I18n.get("pokedex.button.users.tooltip"));
             topRightPanel.add(adminButton);
         }
         return topRightPanel;
@@ -225,7 +226,7 @@ public class PokedexPanel extends JPanel {
     private JTextField createIdField() {
         JTextField field = new JTextField(5);
         field.setFont(UIUtils.LABEL_FONT);
-        field.setToolTipText("Digite o ID do Pokémon (1-151)");
+        field.setToolTipText(I18n.get("pokedex.tooltip.id"));
         UIUtils.applyRoundedBorder(field);
         UIUtils.addFocusEffect(field, this::validateIdField);
         field.addActionListener(e -> buscarPorId());
@@ -236,7 +237,7 @@ public class PokedexPanel extends JPanel {
         JComboBox<String> comboBox = new JComboBox<>(getPokemonTypes());
         comboBox.setFont(UIUtils.LABEL_FONT);
         comboBox.setMaximumRowCount(10);
-        comboBox.setToolTipText("Selecione um tipo para filtrar");
+        comboBox.setToolTipText(I18n.get("pokedex.tooltip.type"));
         comboBox.addActionListener(e -> applyFilters());
         return comboBox;
     }
@@ -295,7 +296,18 @@ public class PokedexPanel extends JPanel {
         slider.setPaintTicks(true);
         slider.setPaintLabels(true);
         slider.setBackground(UIUtils.BG_COLOR);
-        slider.setToolTipText("Filtrar por " + name + " mínimo");
+
+        // Get i18n key based on name
+        String tooltipKey = switch (name) {
+            case "HP" -> "pokedex.tooltip.slider.hp";
+            case "Attack" -> "pokedex.tooltip.slider.attack";
+            case "Defense" -> "pokedex.tooltip.slider.defense";
+            case "Sp. Atk" -> "pokedex.tooltip.slider.spAtk";
+            case "Sp. Def" -> "pokedex.tooltip.slider.spDef";
+            case "Speed" -> "pokedex.tooltip.slider.speed";
+            default -> "";
+        };
+        slider.setToolTipText(I18n.get(tooltipKey));
         slider.setPreferredSize(new Dimension(150, 40));
         slider.addChangeListener(e -> {
             JSlider source = (JSlider) e.getSource();
@@ -319,15 +331,15 @@ public class PokedexPanel extends JPanel {
 
     private void addButtons(JPanel panel, GridBagConstraints gbc) {
         ButtonConfig[] buttons = {
-            new ButtonConfig("Buscar", e -> buscarPorId(), "Buscar por ID"),
-            new ButtonConfig("Mostrar Todos", e -> resetAndShowAll(), "Mostrar todos os Pokémons"),
-            new ButtonConfig("Battle", e -> startBattle(), "Iniciar batalha"),
-            new ButtonConfig("Limpar", e -> resetAndShowAll(), "Limpar todos os filtros"),
-            new ButtonConfig("Sair", e -> {
+            new ButtonConfig(I18n.get("pokedex.button.search"), e -> buscarPorId(), I18n.get("pokedex.button.search.tooltip")),
+            new ButtonConfig(I18n.get("pokedex.button.showAll"), e -> resetAndShowAll(), I18n.get("pokedex.button.showAll.tooltip")),
+            new ButtonConfig(I18n.get("pokedex.button.battle"), e -> startBattle(), I18n.get("pokedex.button.battle.tooltip")),
+            new ButtonConfig(I18n.get("pokedex.button.clear"), e -> resetAndShowAll(), I18n.get("pokedex.button.clear.tooltip")),
+            new ButtonConfig(I18n.get("pokedex.button.exit"), e -> {
                 closeConnections();
                 parentFrame.dispose();
                 System.exit(0);
-            }, "Sair do aplicativo")
+            }, I18n.get("pokedex.button.exit.tooltip"))
         };
 
         gbc.gridy = 5;
@@ -341,7 +353,21 @@ public class PokedexPanel extends JPanel {
     }
 
     private JScrollPane createTablePane() {
-        String[] columns = {"Imagem", "ID", "Name", "Form", "Type1", "Type2", "HP", "Attack", "Defense", "SpAtk", "SpDef", "Speed", "Gen"};
+        String[] columns = {
+            I18n.get("pokedex.table.image"),
+            I18n.get("pokedex.table.id"),
+            I18n.get("pokedex.table.name"),
+            I18n.get("pokedex.table.form"),
+            I18n.get("pokedex.table.type1"),
+            I18n.get("pokedex.table.type2"),
+            I18n.get("pokedex.table.hp"),
+            I18n.get("pokedex.table.attack"),
+            I18n.get("pokedex.table.defense"),
+            I18n.get("pokedex.table.spAtk"),
+            I18n.get("pokedex.table.spDef"),
+            I18n.get("pokedex.table.speed"),
+            I18n.get("pokedex.table.gen")
+        };
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public Class<?> getColumnClass(int col) {
@@ -409,14 +435,14 @@ public class PokedexPanel extends JPanel {
 
         int id = (int) tableModel.getValueAt(row, 1);
         String name = (String) tableModel.getValueAt(row, 2);
-        statusBar.setText("Pokémon selecionado: " + name + " (ID: " + id + ")");
+        statusBar.setText(I18n.get("pokedex.status.selected", name, id));
     }
 
     private JPanel createBottomPanel() {
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setBackground(UIUtils.BG_COLOR);
 
-        statusBar = UIUtils.createLabel("Pronto");
+        statusBar = UIUtils.createLabel(I18n.get("pokedex.status.ready"));
         statusBar.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(UIUtils.PRIMARY_COLOR, 2, true),
             BorderFactory.createEmptyBorder(5, 5, 5, 5)
@@ -426,11 +452,11 @@ public class PokedexPanel extends JPanel {
         JPanel bottomButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         bottomButtonPanel.setBackground(UIUtils.BG_COLOR);
 
-        voltarButton = UIUtils.createStyledButton("Voltar", e -> {
+        voltarButton = UIUtils.createStyledButton(I18n.get("pokedex.button.back"), e -> {
             closeConnections();
             parentFrame.dispose();
             SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
-        }, "Voltar para a tela de login");
+        }, I18n.get("pokedex.button.back.tooltip"));
         bottomButtonPanel.add(voltarButton);
 
         bottomPanel.add(bottomButtonPanel, BorderLayout.CENTER);
@@ -455,7 +481,7 @@ public class PokedexPanel extends JPanel {
             return pokemonService.getMaxAttributeValues();
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Erro ao carregar valores máximos dos atributos", ex);
-            showError("Erro ao carregar valores máximos dos atributos.");
+            showError(I18n.get("pokedex.error.loadMaxValues"));
             // Return default values in case of error
             return new AttributeMaxValues(255, 200, 250, 200, 230, 200);
         }
@@ -466,25 +492,25 @@ public class PokedexPanel extends JPanel {
             return pokemonService.getAllTypes();
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "Erro ao carregar tipos de Pokémon", ex);
-            return new String[]{"All"};
+            return new String[]{I18n.get("type.all")};
         }
     }
 
     private void buscarPorId() {
         String txt = idField.getText().trim();
         if (txt.isEmpty()) {
-            showError("Por favor, digite um ID.", idField);
+            showError(I18n.get("pokedex.error.idEmpty"), idField);
             return;
         }
         if (!PokemonUtils.isValidId(txt)) {
-            showError("ID deve estar entre 1 e 151.", idField);
+            showError(I18n.get("pokedex.error.idInvalid"), idField);
             return;
         }
         int id = Integer.parseInt(txt);
         carregarDados(id, (String) typeFilter.getSelectedItem(),
             hpSlider.getValue(), attackSlider.getValue(), defenseSlider.getValue(),
             spAtkSlider.getValue(), spDefSlider.getValue(), speedSlider.getValue());
-        statusBar.setText("Mostrando Pokémon com ID " + id);
+        statusBar.setText(I18n.get("pokedex.status.showingId", id));
         idField.setBorder(UIUtils.createRoundedBorder(Color.GRAY));
     }
 
@@ -497,17 +523,16 @@ public class PokedexPanel extends JPanel {
             carregarDados(id, type, hpSlider.getValue(), attackSlider.getValue(),
                 defenseSlider.getValue(), spAtkSlider.getValue(), spDefSlider.getValue(),
                 speedSlider.getValue());
-            StringBuilder status = new StringBuilder("Filtrando por ");
-            status.append("Type: ").append(type.equals("All") ? "All" : type).append(", ");
-            status.append("HP >= ").append(hpSlider.getValue()).append(", ");
-            status.append("Attack >= ").append(attackSlider.getValue()).append(", ");
-            status.append("Defense >= ").append(defenseSlider.getValue()).append(", ");
-            status.append("Sp. Atk >= ").append(spAtkSlider.getValue()).append(", ");
-            status.append("Sp. Def >= ").append(spDefSlider.getValue()).append(", ");
-            status.append("Speed >= ").append(speedSlider.getValue());
-            statusBar.setText(status.toString());
+            statusBar.setText(I18n.get("pokedex.status.filtering",
+                type.equals("All") ? "All" : type,
+                hpSlider.getValue(),
+                attackSlider.getValue(),
+                defenseSlider.getValue(),
+                spAtkSlider.getValue(),
+                spDefSlider.getValue(),
+                speedSlider.getValue()));
         } else {
-            showError("ID inválido.", idField);
+            showError(I18n.get("pokedex.error.invalidId"), idField);
         }
     }
 
@@ -527,7 +552,7 @@ public class PokedexPanel extends JPanel {
         spDefLabel.setText("Sp. Def: 0-" + maxAttributeValues.maxSpDef());
         speedLabel.setText("Speed: 0-" + maxAttributeValues.maxSpeed());
         applyFilters();
-        statusBar.setText("Campos limpos. Mostrando todos os Pokémons.");
+        statusBar.setText(I18n.get("pokedex.status.cleared"));
     }
 
     private void carregarDados(Integer id, String type, int minHp, int minAttack, int minDefense,
@@ -580,11 +605,16 @@ public class PokedexPanel extends JPanel {
                 tableModel.addRow(row);
             }
 
-            statusBar.setText(found ? "Mostrando Pokémons filtrados." :
-                "Nenhum Pokémon encontrado" + (id == null ? "" : " com ID " + id) + ".");
+            if (found) {
+                statusBar.setText(I18n.get("pokedex.status.showingFiltered"));
+            } else {
+                statusBar.setText(id == null ?
+                    I18n.get("pokedex.status.notFound") :
+                    I18n.get("pokedex.status.notFoundWithId", id));
+            }
 
         } catch (SQLException ex) {
-            showError("Erro ao carregar dados: " + ex.getMessage());
+            showError(I18n.get("pokedex.error.loadData", ex.getMessage()));
             LOGGER.log(Level.SEVERE, "Erro ao carregar dados da Pokédex", ex);
         }
     }
@@ -599,7 +629,7 @@ public class PokedexPanel extends JPanel {
             g2d.fillRect(0, 0, 64, 64);
             g2d.setColor(Color.WHITE);
             g2d.setFont(UIUtils.LABEL_FONT);
-            g2d.drawString("No Image", 10, 32);
+            g2d.drawString(I18n.get("pokedex.image.noImage"), 10, 32);
             g2d.dispose();
             return new ImageIcon(placeholder);
         }
@@ -641,11 +671,11 @@ public class PokedexPanel extends JPanel {
         JOptionPane.showMessageDialog(
             this,
             content,
-            "Easter Egg - Mensagem Secreta!",
+            I18n.get("pokedex.easter.title"),
             JOptionPane.INFORMATION_MESSAGE
         );
 
-        statusBar.setText("Easter Egg encontrado! Parabéns, " + username + "!");
+        statusBar.setText(I18n.get("pokedex.easter.found", username));
     }
 
     @Override

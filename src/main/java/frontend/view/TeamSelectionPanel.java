@@ -38,6 +38,7 @@ import backend.application.service.PokemonService;
 import backend.application.service.TeamService;
 import backend.domain.model.Pokemon;
 import backend.infrastructure.ServiceLocator;
+import shared.util.I18n;
 import frontend.util.UIUtils;
 
 public class TeamSelectionPanel extends JPanel {
@@ -83,13 +84,13 @@ public class TeamSelectionPanel extends JPanel {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
 
-        JLabel titleLabel = new JLabel("SELECT YOUR TEAM");
+        JLabel titleLabel = new JLabel(I18n.get("team.title"));
         titleLabel.setFont(new Font("Arial", Font.BOLD, 28));
         titleLabel.setForeground(new Color(200, 0, 0));
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(titleLabel, BorderLayout.NORTH);
 
-        statusLabel = new JLabel("Choose 5 Pokemon for your team (0/5 selected)");
+        statusLabel = new JLabel(I18n.get("team.status.choose", 0));
         statusLabel.setFont(new Font("Arial", Font.BOLD, 14));
         statusLabel.setForeground(new Color(50, 50, 50));
         statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -113,7 +114,7 @@ public class TeamSelectionPanel extends JPanel {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(new Color(100, 150, 200), 2, true),
-            "AVAILABLE POKEMON",
+            I18n.get("team.panel.available"),
             TitledBorder.CENTER,
             TitledBorder.TOP,
             new Font("Arial", Font.BOLD, 14),
@@ -140,7 +141,7 @@ public class TeamSelectionPanel extends JPanel {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createTitledBorder(
             BorderFactory.createLineBorder(new Color(76, 175, 80), 2, true),
-            "YOUR TEAM",
+            I18n.get("team.panel.yourTeam"),
             TitledBorder.CENTER,
             TitledBorder.TOP,
             new Font("Arial", Font.BOLD, 14),
@@ -166,13 +167,13 @@ public class TeamSelectionPanel extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 5));
         panel.setOpaque(false);
 
-        startBattleButton = UIUtils.createStyledButton("START BATTLE", e -> startBattle(), "Begin battle with selected team");
+        startBattleButton = UIUtils.createStyledButton(I18n.get("team.button.startBattle"), e -> startBattle(), I18n.get("team.tooltip.startBattle"));
         startBattleButton.setPreferredSize(new Dimension(180, 40));
         startBattleButton.setFont(new Font("Arial", Font.BOLD, 14));
         startBattleButton.setEnabled(false);
         panel.add(startBattleButton);
 
-        JButton backButton = UIUtils.createStyledButton("Back to Pokedex", e -> returnToPokedex(), "Return to Pokedex");
+        JButton backButton = UIUtils.createStyledButton(I18n.get("team.button.back"), e -> returnToPokedex(), I18n.get("team.tooltip.back"));
         backButton.setPreferredSize(new Dimension(160, 40));
         backButton.setFont(new Font("Arial", Font.BOLD, 12));
         panel.add(backButton);
@@ -197,8 +198,8 @@ public class TeamSelectionPanel extends JPanel {
 
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error loading Pokemon", e);
-            JOptionPane.showMessageDialog(this, "Error loading Pokemon: " + e.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.get("team.error.loadPokemon", e.getMessage()),
+                I18n.get("common.error"), JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -289,11 +290,11 @@ public class TeamSelectionPanel extends JPanel {
 
         infoPanel.add(Box.createVerticalStrut(3));
 
-        JLabel hpLabel = new JLabel("HP: " + pokemon.getHp());
+        JLabel hpLabel = new JLabel(I18n.get("team.label.hp", pokemon.getHp()));
         hpLabel.setFont(new Font("Arial", Font.PLAIN, 11));
         infoPanel.add(hpLabel);
 
-        JLabel statsLabel = new JLabel("ATK: " + pokemon.getAttack() + " | DEF: " + pokemon.getDefense());
+        JLabel statsLabel = new JLabel(I18n.get("team.label.stats", pokemon.getAttack(), pokemon.getDefense()));
         statsLabel.setFont(new Font("Arial", Font.PLAIN, 10));
         infoPanel.add(statsLabel);
 
@@ -329,8 +330,8 @@ public class TeamSelectionPanel extends JPanel {
     private void selectPokemon(Pokemon pokemon) {
         if (selectedTeam.size() >= 5) {
             JOptionPane.showMessageDialog(this,
-                "You already have 5 Pokemon in your team!\nRemove one to add another.",
-                "Team Full", JOptionPane.WARNING_MESSAGE);
+                I18n.get("team.error.teamFull"),
+                I18n.get("team.error.teamFullTitle"), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -368,11 +369,11 @@ public class TeamSelectionPanel extends JPanel {
 
     private void updateStatusLabel() {
         int count = selectedTeam.size();
-        statusLabel.setText(String.format("Choose 5 Pokemon for your team (%d/5 selected)", count));
+        statusLabel.setText(I18n.get("team.status.choose", count));
 
         if (count == 5) {
             statusLabel.setForeground(new Color(76, 175, 80));
-            statusLabel.setText("Team Complete! Ready to battle!");
+            statusLabel.setText(I18n.get("team.status.complete"));
         } else {
             statusLabel.setForeground(new Color(50, 50, 50));
         }
@@ -403,8 +404,8 @@ public class TeamSelectionPanel extends JPanel {
     private void startBattle() {
         if (selectedTeam.size() != 5) {
             JOptionPane.showMessageDialog(this,
-                "You must select exactly 5 Pokemon!",
-                "Invalid Team", JOptionPane.WARNING_MESSAGE);
+                I18n.get("team.error.invalidTeam"),
+                I18n.get("team.error.invalidTeamTitle"), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -433,8 +434,8 @@ public class TeamSelectionPanel extends JPanel {
             return pokemonList;
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error generating enemy team", e);
-            JOptionPane.showMessageDialog(this, "Error generating enemy team: " + e.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, I18n.get("team.error.generateEnemy", e.getMessage()),
+                I18n.get("common.error"), JOptionPane.ERROR_MESSAGE);
             return new ArrayList<>();
         }
     }

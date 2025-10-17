@@ -35,6 +35,7 @@ import javax.swing.border.EmptyBorder;
 
 import backend.application.service.UserService;
 import backend.infrastructure.ServiceLocator;
+import shared.util.I18n;
 import frontend.util.UIUtils;
 
 public class LoginFrame extends JFrame {
@@ -56,7 +57,7 @@ public class LoginFrame extends JFrame {
     public LoginFrame() {
         this.userService = ServiceLocator.getInstance().getUserService();
 
-        setTitle("Pokédex - Sistema de Login");
+        setTitle(I18n.get("login.title"));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(500, 650);
         setLocationRelativeTo(null);
@@ -117,12 +118,12 @@ public class LoginFrame extends JFrame {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setOpaque(false);
 
-        JLabel titleLabel = UIUtils.createLabel("Pokédex");
+        JLabel titleLabel = UIUtils.createLabel(I18n.get("login.app.title"));
         titleLabel.setFont(new Font("Arial", Font.BOLD, 36));
         titleLabel.setForeground(UIUtils.PRIMARY_COLOR);
         titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        JLabel subtitleLabel = UIUtils.createLabel("Sistema de Gerenciamento");
+        JLabel subtitleLabel = UIUtils.createLabel(I18n.get("login.app.subtitle"));
         subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 14));
         subtitleLabel.setForeground(new Color(80, 80, 80));
         subtitleLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -184,7 +185,7 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
-        JLabel userLabel = UIUtils.createLabel("Usuário:");
+        JLabel userLabel = UIUtils.createLabel(I18n.get("login.label.username"));
         userLabel.setFont(new Font("Arial", Font.BOLD, 13));
         panel.add(userLabel, gbc);
 
@@ -195,7 +196,7 @@ public class LoginFrame extends JFrame {
         userField.setMinimumSize(new Dimension(250, 36));
         userField.setMaximumSize(new Dimension(250, 36));
         userField.setFont(UIUtils.FIELD_FONT);
-        userField.setToolTipText("Digite seu nome de usuário (mínimo 3 caracteres)");
+        userField.setToolTipText(I18n.get("login.tooltip.username"));
         UIUtils.applyRoundedBorder(userField);
         UIUtils.addFocusEffect(userField, this::validateField);
         userField.addActionListener(e -> performAction());
@@ -205,7 +206,7 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.weightx = 0;
-        JLabel passLabel = UIUtils.createLabel("Senha:");
+        JLabel passLabel = UIUtils.createLabel(I18n.get("login.label.password"));
         passLabel.setFont(new Font("Arial", Font.BOLD, 13));
         panel.add(passLabel, gbc);
 
@@ -216,7 +217,7 @@ public class LoginFrame extends JFrame {
         passField.setMinimumSize(new Dimension(250, 36));
         passField.setMaximumSize(new Dimension(250, 36));
         passField.setFont(UIUtils.FIELD_FONT);
-        passField.setToolTipText("Digite sua senha (mínimo 6 caracteres)");
+        passField.setToolTipText(I18n.get("login.tooltip.password"));
         UIUtils.applyRoundedBorder(passField);
         UIUtils.addFocusEffect(passField, this::validateField);
         passField.addActionListener(e -> performAction());
@@ -226,7 +227,7 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.weightx = 0;
-        confirmPassLabel = UIUtils.createLabel("Confirmar:");
+        confirmPassLabel = UIUtils.createLabel(I18n.get("login.label.confirmPassword"));
         confirmPassLabel.setFont(new Font("Arial", Font.BOLD, 13));
         confirmPassLabel.setVisible(false);
         panel.add(confirmPassLabel, gbc);
@@ -238,7 +239,7 @@ public class LoginFrame extends JFrame {
         confirmPassField.setMinimumSize(new Dimension(250, 36));
         confirmPassField.setMaximumSize(new Dimension(250, 36));
         confirmPassField.setFont(UIUtils.FIELD_FONT);
-        confirmPassField.setToolTipText("Confirme sua senha");
+        confirmPassField.setToolTipText(I18n.get("login.tooltip.confirmPassword"));
         UIUtils.applyRoundedBorder(confirmPassField);
         UIUtils.addFocusEffect(confirmPassField, this::validateField);
         confirmPassField.addActionListener(e -> performAction());
@@ -252,26 +253,26 @@ public class LoginFrame extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 10));
         panel.setOpaque(false);
 
-        loginButton = UIUtils.createStyledButton("Entrar", e -> {
+        loginButton = UIUtils.createStyledButton(I18n.get("login.button.login"), e -> {
             if (isRegisterMode) {
                 toggleRegisterMode(false);
             } else {
                 performAction();
             }
-        }, "Entrar no sistema");
+        }, I18n.get("login.button.login.tooltip"));
         panel.add(loginButton);
         getRootPane().setDefaultButton(loginButton);
 
-        registerButton = UIUtils.createStyledButton("Cadastrar", e -> {
+        registerButton = UIUtils.createStyledButton(I18n.get("login.button.register"), e -> {
             if (!isRegisterMode) {
                 toggleRegisterMode(true);
             } else {
                 performAction();
             }
-        }, "Cadastrar novo usuário");
+        }, I18n.get("login.button.register.tooltip"));
         panel.add(registerButton);
 
-        clearButton = UIUtils.createStyledButton("Limpar", e -> clearFields(), "Limpar todos os campos");
+        clearButton = UIUtils.createStyledButton(I18n.get("login.button.clear"), e -> clearFields(), I18n.get("login.button.clear.tooltip"));
         panel.add(clearButton);
 
         return panel;
@@ -291,20 +292,20 @@ public class LoginFrame extends JFrame {
             confirmPassField.setVisible(enable);
 
             if (enable) {
-                setTitle("Pokédex - Cadastro de Usuário");
-                loginButton.setText("Voltar");
-                loginButton.setToolTipText("Voltar ao login");
-                registerButton.setText("Confirmar");
-                registerButton.setToolTipText("Confirmar cadastro");
+                setTitle(I18n.get("login.register.title"));
+                loginButton.setText(I18n.get("login.button.back"));
+                loginButton.setToolTipText(I18n.get("login.button.back.tooltip"));
+                registerButton.setText(I18n.get("login.button.confirm"));
+                registerButton.setToolTipText(I18n.get("login.button.confirm.tooltip"));
                 getRootPane().setDefaultButton(registerButton);
-                statusLabel.setText("Preencha os campos para criar sua conta");
+                statusLabel.setText(I18n.get("login.register.instruction"));
                 statusLabel.setForeground(new Color(100, 100, 100));
             } else {
-                setTitle("Pokédex - Sistema de Login");
-                loginButton.setText("Entrar");
-                loginButton.setToolTipText("Entrar no sistema");
-                registerButton.setText("Cadastrar");
-                registerButton.setToolTipText("Cadastrar novo usuário");
+                setTitle(I18n.get("login.title"));
+                loginButton.setText(I18n.get("login.button.login"));
+                loginButton.setToolTipText(I18n.get("login.button.login.tooltip"));
+                registerButton.setText(I18n.get("login.button.register"));
+                registerButton.setToolTipText(I18n.get("login.button.register.tooltip"));
                 getRootPane().setDefaultButton(loginButton);
                 statusLabel.setText(" ");
                 statusLabel.setForeground(new Color(100, 100, 100));
@@ -327,28 +328,28 @@ public class LoginFrame extends JFrame {
 
         // Validate inputs
         if (username.isEmpty() || password.isEmpty()) {
-            showError("Por favor, preencha todos os campos.", userField, passField);
+            showError(I18n.get("login.error.emptyFields"), userField, passField);
             return;
         }
 
         if (!UserService.validateUsername(username)) {
-            showError("Nome de usuário deve ter pelo menos 3 caracteres.", userField);
+            showError(I18n.get("login.error.usernameInvalid"), userField);
             return;
         }
 
         if (!UserService.validatePassword(password, isRegisterMode)) {
-            showError("Senha deve ter pelo menos 6 caracteres.", passField);
+            showError(I18n.get("login.error.passwordInvalid"), passField);
             return;
         }
 
         if (isRegisterMode) {
             String confirmPassword = new String(confirmPassField.getPassword()).trim();
             if (confirmPassword.isEmpty()) {
-                showError("Por favor, confirme sua senha.", confirmPassField);
+                showError(I18n.get("login.error.confirmPasswordEmpty"), confirmPassField);
                 return;
             }
             if (!password.equals(confirmPassword)) {
-                showError("As senhas não coincidem.", passField, confirmPassField);
+                showError(I18n.get("login.error.passwordMismatch"), passField, confirmPassField);
                 return;
             }
             register(username, password, confirmPassword);
@@ -359,7 +360,7 @@ public class LoginFrame extends JFrame {
 
     private void authenticate(String username, String password) {
         setProcessing(true);
-        statusLabel.setText("Autenticando...");
+        statusLabel.setText(I18n.get("login.status.authenticating"));
 
         SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
             private String errorMessage = null;
@@ -370,7 +371,7 @@ public class LoginFrame extends JFrame {
                     return userService.authenticate(username, password);
                 } catch (SQLException ex) {
                     LOGGER.log(Level.SEVERE, "Erro ao autenticar", ex);
-                    errorMessage = "Erro de conexão: " + ex.getMessage();
+                    errorMessage = I18n.get("login.error.connectionFailed", ex.getMessage());
                     return false;
                 }
             }
@@ -379,21 +380,21 @@ public class LoginFrame extends JFrame {
             protected void done() {
                 try {
                     if (get()) {
-                        statusLabel.setText("Login bem-sucedido!");
+                        statusLabel.setText(I18n.get("login.status.success"));
                         JOptionPane.showMessageDialog(LoginFrame.this,
-                                "Bem-vindo, " + username + "!",
-                                "Login Bem-Sucedido",
+                                I18n.get("login.success.welcome", username),
+                                I18n.get("login.success.title"),
                                 JOptionPane.INFORMATION_MESSAGE);
                         openPokedex(username);
                     } else {
                         if (errorMessage != null) {
                             showError(errorMessage, userField, passField);
                         } else {
-                            showError("Usuário ou senha inválidos.", userField, passField);
+                            showError(I18n.get("login.error.invalidCredentials"), userField, passField);
                         }
                     }
                 } catch (Exception ex) {
-                    showError("Erro inesperado: " + ex.getMessage());
+                    showError(I18n.get("login.error.unexpected", ex.getMessage()));
                 } finally {
                     setProcessing(false);
                 }
@@ -404,7 +405,7 @@ public class LoginFrame extends JFrame {
 
     private void register(String username, String password, String confirmPassword) {
         setProcessing(true);
-        statusLabel.setText("Criando conta...");
+        statusLabel.setText(I18n.get("login.status.registering"));
 
         SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
             private String errorMessage = null;
@@ -425,10 +426,10 @@ public class LoginFrame extends JFrame {
             protected void done() {
                 try {
                     if (get()) {
-                        statusLabel.setText("Cadastro realizado com sucesso!");
+                        statusLabel.setText(I18n.get("login.register.success"));
                         JOptionPane.showMessageDialog(LoginFrame.this,
-                                "Conta criada com sucesso!\nAgora você pode fazer login.",
-                                "Cadastro Bem-Sucedido",
+                                I18n.get("login.register.successMessage"),
+                                I18n.get("login.register.successTitle"),
                                 JOptionPane.INFORMATION_MESSAGE);
                         toggleRegisterMode(false);
                     } else {
@@ -440,7 +441,7 @@ public class LoginFrame extends JFrame {
                         showError(errorMessage, errorFields);
                     }
                 } catch (Exception ex) {
-                    showError("Erro inesperado: " + ex.getMessage());
+                    showError(I18n.get("login.error.unexpected", ex.getMessage()));
                 } finally {
                     setProcessing(false);
                 }
@@ -568,8 +569,8 @@ public class LoginFrame extends JFrame {
             } catch (Exception ex) {
                 LOGGER.log(Level.SEVERE, "Erro ao abrir Pokédex", ex);
                 JOptionPane.showMessageDialog(null,
-                        "Erro ao abrir a Pokédex: " + ex.getMessage(),
-                        "Erro",
+                        I18n.get("login.error.openPokedex", ex.getMessage()),
+                        I18n.get("common.error"),
                         JOptionPane.ERROR_MESSAGE);
                 // Reopen login frame
                 new LoginFrame().setVisible(true);

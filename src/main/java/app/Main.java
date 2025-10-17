@@ -7,7 +7,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
 import backend.infrastructure.ServiceLocator;
-import frontend.view.LoginFrame;
+import frontend.view.WelcomeFrame;
 
 /**
  * Main application entry point
@@ -43,9 +43,9 @@ public class Main {
         // Launch GUI
         SwingUtilities.invokeLater(() -> {
             try {
-                new LoginFrame().setVisible(true);
+                new WelcomeFrame().setVisible(true);
             } catch (Exception e) {
-                LOGGER.log(Level.SEVERE, "Failed to launch LoginFrame", e);
+                LOGGER.log(Level.SEVERE, "Failed to launch WelcomeFrame", e);
             }
         });
     }

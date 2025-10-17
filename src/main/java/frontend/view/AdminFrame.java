@@ -46,6 +46,7 @@ import javax.swing.table.TableRowSorter;
 import backend.application.service.UserService;
 import backend.domain.model.User;
 import backend.infrastructure.ServiceLocator;
+import shared.util.I18n;
 import frontend.util.UIUtils;
 
 public class AdminFrame extends JFrame {
@@ -64,7 +65,7 @@ public class AdminFrame extends JFrame {
         this.username = username;
         this.userService = ServiceLocator.getInstance().getUserService();
 
-        setTitle("Pokédex - Painel de Administração - " + username);
+        setTitle(I18n.get("admin.title", username));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(950, 650);
         setLocationRelativeTo(null);
@@ -98,12 +99,12 @@ public class AdminFrame extends JFrame {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        JLabel headerLabel = UIUtils.createLabel("Painel de Administração");
+        JLabel headerLabel = UIUtils.createLabel(I18n.get("admin.header.title"));
         headerLabel.setFont(new Font("Arial", Font.BOLD, 28));
         headerLabel.setForeground(UIUtils.PRIMARY_COLOR);
         headerLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        JLabel subheaderLabel = UIUtils.createLabel("Gerenciamento de Usuários do Sistema");
+        JLabel subheaderLabel = UIUtils.createLabel(I18n.get("admin.header.subtitle"));
         subheaderLabel.setFont(new Font("Arial", Font.PLAIN, 13));
         subheaderLabel.setForeground(new Color(100, 100, 100));
         subheaderLabel.setHorizontalAlignment(SwingConstants.CENTER);
@@ -150,13 +151,13 @@ public class AdminFrame extends JFrame {
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         searchPanel.setOpaque(false);
 
-        JLabel searchLabel = UIUtils.createLabel("Buscar Usuário:");
+        JLabel searchLabel = UIUtils.createLabel(I18n.get("admin.label.search"));
         searchLabel.setFont(new Font("Arial", Font.BOLD, 13));
         searchPanel.add(searchLabel);
 
         searchField = new JTextField(20);
         searchField.setFont(UIUtils.FIELD_FONT);
-        searchField.setToolTipText("Digite o nome de usuário para buscar");
+        searchField.setToolTipText(I18n.get("admin.tooltip.search"));
         UIUtils.applyRoundedBorder(searchField);
         searchField.addActionListener(e -> searchUsers());
         // Real-time search
@@ -168,13 +169,13 @@ public class AdminFrame extends JFrame {
         });
         searchPanel.add(searchField);
 
-        searchButton = UIUtils.createStyledButton("Buscar", e -> searchUsers(), "Buscar usuário no banco");
+        searchButton = UIUtils.createStyledButton(I18n.get("admin.button.search"), e -> searchUsers(), I18n.get("admin.tooltip.searchButton"));
         searchPanel.add(searchButton);
 
-        clearSearchButton = UIUtils.createStyledButton("Limpar", e -> clearSearch(), "Limpar filtros de busca");
+        clearSearchButton = UIUtils.createStyledButton(I18n.get("admin.button.clear"), e -> clearSearch(), I18n.get("admin.tooltip.clear"));
         searchPanel.add(clearSearchButton);
 
-        refreshButton = UIUtils.createStyledButton("Atualizar", e -> refreshTable(), "Recarregar lista de usuários");
+        refreshButton = UIUtils.createStyledButton(I18n.get("admin.button.refresh"), e -> refreshTable(), I18n.get("admin.tooltip.refresh"));
         searchPanel.add(refreshButton);
 
         return searchPanel;
@@ -184,24 +185,24 @@ public class AdminFrame extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 8));
         buttonPanel.setOpaque(false);
 
-        JLabel actionsLabel = UIUtils.createLabel("Ações:");
+        JLabel actionsLabel = UIUtils.createLabel(I18n.get("admin.label.actions"));
         actionsLabel.setFont(new Font("Arial", Font.BOLD, 13));
         buttonPanel.add(actionsLabel);
 
-        addButton = UIUtils.createStyledButton("➕ Adicionar", e -> openUserDialog(null), "Adicionar novo usuário");
+        addButton = UIUtils.createStyledButton(I18n.get("admin.button.add"), e -> openUserDialog(null), I18n.get("admin.tooltip.add"));
         buttonPanel.add(addButton);
 
-        editButton = UIUtils.createStyledButton("✏️ Editar", e -> {
+        editButton = UIUtils.createStyledButton(I18n.get("admin.button.edit"), e -> {
             User user = getSelectedUser();
             if (user == null) {
-                showError("Selecione um usuário na tabela para editar.");
+                showError(I18n.get("admin.error.selectUser"));
                 return;
             }
             openUserDialog(user);
-        }, "Editar usuário selecionado");
+        }, I18n.get("admin.tooltip.edit"));
         buttonPanel.add(editButton);
 
-        deleteButton = UIUtils.createStyledButton("🗑️ Excluir", e -> deleteUser(), "Excluir usuário selecionado");
+        deleteButton = UIUtils.createStyledButton(I18n.get("admin.button.delete"), e -> deleteUser(), I18n.get("admin.tooltip.delete"));
         deleteButton.setBackground(new Color(220, 53, 69));
         buttonPanel.add(deleteButton);
 
@@ -209,7 +210,7 @@ public class AdminFrame extends JFrame {
     }
 
     private JScrollPane createTablePane() {
-        String[] columns = {"Usuário", "Tipo", "Último Login", "Conta Criada em"};
+        String[] columns = {I18n.get("admin.table.username"), I18n.get("admin.table.type"), I18n.get("admin.table.lastLogin"), I18n.get("admin.table.createdAt")};
         tableModel = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -301,7 +302,7 @@ public class AdminFrame extends JFrame {
         bottomPanel.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
 
         // Status label
-        statusLabel = UIUtils.createLabel("Pronto");
+        statusLabel = UIUtils.createLabel(I18n.get("admin.status.ready"));
         statusLabel.setFont(new Font("Arial", Font.ITALIC, 12));
         statusLabel.setForeground(new Color(80, 80, 80));
         statusLabel.setBorder(BorderFactory.createCompoundBorder(
@@ -313,8 +314,8 @@ public class AdminFrame extends JFrame {
         bottomPanel.add(statusLabel, BorderLayout.CENTER);
 
         // Back button
-        backButton = UIUtils.createStyledButton("← Voltar ao Pokédex", e -> returnToPokedex(),
-            "Voltar à tela principal");
+        backButton = UIUtils.createStyledButton(I18n.get("admin.button.back"), e -> returnToPokedex(),
+            I18n.get("admin.tooltip.back"));
         backButton.setPreferredSize(new Dimension(180, 35));
         JPanel backPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         backPanel.setOpaque(false);
@@ -329,7 +330,7 @@ public class AdminFrame extends JFrame {
 
         boolean isEditing = user != null;
         JDialog dialog = new JDialog(this,
-            isEditing ? "Editar Usuário" : "Adicionar Novo Usuário", true);
+            isEditing ? I18n.get("admin.dialog.edit") : I18n.get("admin.dialog.add"), true);
         dialog.setSize(450, 300);
         dialog.setLocationRelativeTo(this);
         dialog.setLayout(new BorderLayout(15, 15));
@@ -348,7 +349,7 @@ public class AdminFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.WEST;
-        JLabel userLabel = UIUtils.createLabel("Usuário:");
+        JLabel userLabel = UIUtils.createLabel(I18n.get("admin.label.username"));
         userLabel.setFont(new Font("Arial", Font.BOLD, 13));
         formPanel.add(userLabel, gbc);
 
@@ -356,7 +357,7 @@ public class AdminFrame extends JFrame {
         gbc.weightx = 1.0;
         JTextField usernameField = new JTextField(18);
         usernameField.setFont(UIUtils.FIELD_FONT);
-        usernameField.setToolTipText("Nome de usuário (mínimo 3 caracteres)");
+        usernameField.setToolTipText(I18n.get("admin.tooltip.username"));
         UIUtils.applyRoundedBorder(usernameField);
         if (isEditing) {
             usernameField.setText(user.getUsername());
@@ -367,7 +368,7 @@ public class AdminFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 1;
         gbc.weightx = 0;
-        JLabel passLabel = UIUtils.createLabel("Senha:");
+        JLabel passLabel = UIUtils.createLabel(I18n.get("admin.label.password"));
         passLabel.setFont(new Font("Arial", Font.BOLD, 13));
         formPanel.add(passLabel, gbc);
 
@@ -376,8 +377,8 @@ public class AdminFrame extends JFrame {
         JPasswordField passwordField = new JPasswordField(18);
         passwordField.setFont(UIUtils.FIELD_FONT);
         passwordField.setToolTipText(isEditing ?
-            "Nova senha (deixe em branco para manter a atual)" :
-            "Senha (mínimo 6 caracteres)");
+            I18n.get("admin.tooltip.passwordEdit") :
+            I18n.get("admin.tooltip.passwordNew"));
         UIUtils.applyRoundedBorder(passwordField);
         formPanel.add(passwordField, gbc);
 
@@ -385,10 +386,10 @@ public class AdminFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 2;
         gbc.gridwidth = 2;
-        JCheckBox adminCheckBox = new JCheckBox("Usuário Administrador");
+        JCheckBox adminCheckBox = new JCheckBox(I18n.get("admin.checkbox.admin"));
         adminCheckBox.setFont(new Font("Arial", Font.BOLD, 13));
         adminCheckBox.setBackground(UIUtils.BG_COLOR);
-        adminCheckBox.setToolTipText("Administradores podem gerenciar usuários");
+        adminCheckBox.setToolTipText(I18n.get("admin.tooltip.admin"));
         if (isEditing) {
             adminCheckBox.setSelected(user.isAdmin());
         }
@@ -397,8 +398,8 @@ public class AdminFrame extends JFrame {
         // Help text
         gbc.gridy = 3;
         JLabel helpLabel = UIUtils.createLabel(isEditing ?
-            "Deixe a senha em branco para não alterá-la" :
-            "Preencha todos os campos para criar o usuário");
+            I18n.get("admin.help.edit") :
+            I18n.get("admin.help.add"));
         helpLabel.setFont(new Font("Arial", Font.ITALIC, 11));
         helpLabel.setForeground(new Color(120, 120, 120));
         formPanel.add(helpLabel, gbc);
@@ -410,14 +411,14 @@ public class AdminFrame extends JFrame {
         buttonPanel.setBackground(UIUtils.BG_COLOR);
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 20, 15, 20));
 
-        JButton cancelButton = UIUtils.createStyledButton("Cancelar", e -> dialog.dispose(), "Cancelar operação");
+        JButton cancelButton = UIUtils.createStyledButton(I18n.get("admin.button.cancel"), e -> dialog.dispose(), I18n.get("admin.tooltip.cancel"));
         cancelButton.setBackground(new Color(108, 117, 125));
         buttonPanel.add(cancelButton);
 
         JButton saveButton = UIUtils.createStyledButton(
-            isEditing ? "💾 Salvar" : "➕ Adicionar",
+            isEditing ? I18n.get("admin.button.save") : I18n.get("admin.button.add"),
             e -> saveUser(dialog, user, usernameField, passwordField, adminCheckBox),
-            isEditing ? "Salvar alterações" : "Adicionar novo usuário");
+            isEditing ? I18n.get("admin.tooltip.saveEdit") : I18n.get("admin.tooltip.saveAdd"));
         saveButton.setBackground(new Color(40, 167, 69));
         buttonPanel.add(saveButton);
 
@@ -437,31 +438,31 @@ public class AdminFrame extends JFrame {
 
         // Validation
         if (newUsername.isEmpty()) {
-            showError("O nome de usuário não pode estar vazio.", dialog);
+            showError(I18n.get("admin.error.usernameEmpty"), dialog);
             usernameField.requestFocus();
             return;
         }
 
         if (!UserService.validateUsername(newUsername)) {
-            showError("O nome de usuário deve ter pelo menos 3 caracteres.", dialog);
+            showError(I18n.get("admin.error.usernameInvalid"), dialog);
             usernameField.requestFocus();
             return;
         }
 
         if (user == null && password.isEmpty()) {
-            showError("A senha é obrigatória para novos usuários.", dialog);
+            showError(I18n.get("admin.error.passwordRequired"), dialog);
             passwordField.requestFocus();
             return;
         }
 
         if (!password.isEmpty() && !UserService.validatePassword(password, user == null)) {
-            showError("A senha deve ter pelo menos 6 caracteres.", dialog);
+            showError(I18n.get("admin.error.passwordInvalid"), dialog);
             passwordField.requestFocus();
             return;
         }
 
         setProcessing(true);
-        statusLabel.setText("Salvando usuário...");
+        statusLabel.setText(I18n.get("admin.status.saving"));
 
         SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
             private String errorMessage = null;
@@ -487,16 +488,16 @@ public class AdminFrame extends JFrame {
                 try {
                     if (get()) {
                         String successMsg = user == null ?
-                            "Usuário '" + newUsername + "' adicionado com sucesso!" :
-                            "Usuário atualizado com sucesso!";
+                            I18n.get("admin.status.added", newUsername) :
+                            I18n.get("admin.status.updated");
                         showMessage(successMsg);
                         loadUsers(null);
                         dialog.dispose();
                     } else {
-                        showError("Erro: " + errorMessage, dialog);
+                        showError(I18n.get("admin.error.saving", errorMessage), dialog);
                     }
                 } catch (Exception ex) {
-                    showError("Erro inesperado: " + ex.getMessage(), dialog);
+                    showError(I18n.get("admin.error.unexpected", ex.getMessage()), dialog);
                 } finally {
                     setProcessing(false);
                 }
@@ -507,7 +508,7 @@ public class AdminFrame extends JFrame {
 
     private void loadUsers(String searchTerm) {
         setProcessing(true);
-        statusLabel.setText("Carregando usuários...");
+        statusLabel.setText(I18n.get("admin.status.loading"));
         tableModel.setRowCount(0);
 
         SwingWorker<List<User>, Void> worker = new SwingWorker<>() {
@@ -523,18 +524,18 @@ public class AdminFrame extends JFrame {
                     for (User user : users) {
                         tableModel.addRow(new Object[]{
                             user.getUsername(),
-                            user.isAdmin() ? "🔑 Admin" : "👤 Usuário",
+                            user.isAdmin() ? I18n.get("admin.table.type.admin") : I18n.get("admin.table.type.user"),
                             user.getTimeSinceLastLogin(),
                             user.getAccountCreatedFormatted()
                         });
                     }
 
-                    userCountLabel.setText("Total: " + users.size() + " usuário(s)");
-                    statusLabel.setText("✓ " + users.size() + " usuário(s) carregado(s) - " +
-                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
+                    userCountLabel.setText(I18n.get("admin.count", users.size()));
+                    statusLabel.setText(I18n.get("admin.status.loaded", users.size(),
+                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))));
                 } catch (Exception ex) {
                     LOGGER.log(Level.SEVERE, "Erro ao carregar usuários", ex);
-                    showError("Erro ao carregar usuários: " + ex.getMessage());
+                    showError(I18n.get("admin.error.loading", ex.getMessage()));
                 } finally {
                     setProcessing(false);
                 }
@@ -548,29 +549,28 @@ public class AdminFrame extends JFrame {
 
         User user = getSelectedUser();
         if (user == null) {
-            showError("Selecione um usuário na tabela para excluir.");
+            showError(I18n.get("admin.error.selectUserDelete"));
             return;
         }
 
         if (user.getUsername().equals(username)) {
-            showError("Você não pode excluir sua própria conta enquanto estiver logado.");
+            showError(I18n.get("admin.error.cannotDeleteSelf"));
             return;
         }
 
         int confirm = JOptionPane.showConfirmDialog(this,
-            "Tem certeza que deseja excluir o usuário '" + user.getUsername() + "'?\n\n" +
-            "Esta ação não pode ser desfeita!",
-            "Confirmar Exclusão",
+            I18n.get("admin.confirm.deleteMessage", user.getUsername()),
+            I18n.get("admin.dialog.confirmDelete"),
             JOptionPane.YES_NO_OPTION,
             JOptionPane.WARNING_MESSAGE);
 
         if (confirm != JOptionPane.YES_OPTION) {
-            statusLabel.setText("Exclusão cancelada");
+            statusLabel.setText(I18n.get("admin.status.cancelled"));
             return;
         }
 
         setProcessing(true);
-        statusLabel.setText("Excluindo usuário...");
+        statusLabel.setText(I18n.get("admin.status.deleting"));
 
         SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
             @Override
@@ -588,13 +588,13 @@ public class AdminFrame extends JFrame {
             protected void done() {
                 try {
                     if (get()) {
-                        showMessage("Usuário '" + user.getUsername() + "' excluído com sucesso!");
+                        showMessage(I18n.get("admin.status.deleted", user.getUsername()));
                         loadUsers(null);
                     } else {
-                        showError("Erro ao excluir usuário. Verifique os logs.");
+                        showError(I18n.get("admin.error.deleteUser"));
                     }
                 } catch (Exception ex) {
-                    showError("Erro inesperado: " + ex.getMessage());
+                    showError(I18n.get("admin.error.unexpected", ex.getMessage()));
                 } finally {
                     setProcessing(false);
                 }

@@ -3,6 +3,8 @@ package backend.domain.model;
 import java.util.HashMap;
 import java.util.Map;
 
+import shared.util.I18n;
+
 /**
  * Encapsulates Pokemon type effectiveness chart
  * Handles damage multipliers based on attacking type vs defending type
@@ -213,11 +215,11 @@ public class TypeEffectiveness {
      */
     public static String getEffectivenessText(double multiplier) {
         if (multiplier == 0.0) {
-            return "não tem efeito";
+            return I18n.get("battle.backend.effectiveness.noEffect");
         } else if (multiplier < 1.0) {
-            return "não é muito efetivo";
+            return I18n.get("battle.backend.effectiveness.notVeryEffective");
         } else if (multiplier > 1.0) {
-            return "é super efetivo";
+            return I18n.get("battle.backend.effectiveness.superEffective");
         }
         return "";
     }
