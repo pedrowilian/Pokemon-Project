@@ -12,7 +12,8 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 
-import backend.domain.model.Move;
+import backend.application.dto.MoveDTO;
+import shared.util.MoveTranslator;
 import shared.util.TypeTranslator;
 
 /**
@@ -54,15 +55,15 @@ public class PokemonUtils {
      * Create a styled attack button for battle UI
      * Types are automatically translated to the current language
      */
-    public static JButton createAttackButton(Move move, ActionListener listener) {
+    public static JButton createAttackButton(MoveDTO move, ActionListener listener) {
         Color typeColor = getTypeColor(move.getType());
         Color disabledColor = new Color(120, 120, 120);
         
         // Translate type to current language
         String translatedType = TypeTranslator.translate(move.getType());
         
-        // Use localized move name for display
-        String moveName = move.getLocalizedName();
+        // Use localized move name for display (translate from English)
+        String moveName = MoveTranslator.translate(move.getName());
 
         JButton button = new JButton(String.format(
             "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:8px'>PWR: %d | %s</span></div></html>",
@@ -171,12 +172,12 @@ public class PokemonUtils {
     /**
      * Update attack button with new move data
      */
-    public static void updateAttackButton(JButton button, Move move) {
+    public static void updateAttackButton(JButton button, MoveDTO move) {
         Color typeColor = getTypeColor(move.getType());
         
         // Translate type and move name to current language
         String translatedType = TypeTranslator.translate(move.getType());
-        String moveName = move.getLocalizedName();
+        String moveName = MoveTranslator.translate(move.getName());
 
         button.setText(String.format(
             "<html><div style='text-align:center'><b>%s</b><br><span style='font-size:9px'>PWR: %d | %s</span></div></html>",

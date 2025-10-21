@@ -12,6 +12,9 @@ import java.util.logging.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
 import backend.domain.model.BattleState;
 import backend.domain.model.Move;
 import backend.domain.model.Pokemon;
@@ -23,6 +26,11 @@ import shared.util.I18n;
 /**
  * Battle service - handles all battle logic
  * Extracted from EnhancedBattlePanel (1,762 lines -> clean service)
+ * 
+ * Optimizations:
+ * - Caffeine cache for generated moves (avoids JSON reads every attack)
+ * - Cache never expires (Pokemon moves are immutable)
+ * - Thread-safe concurrent access
  */
 public class BattleService {
     private static final Logger LOGGER = Logger.getLogger(BattleService.class.getName());
@@ -30,10 +38,17 @@ public class BattleService {
     private static final List<Move> allMoves = new ArrayList<>();
     private static JSONObject pokemonMovesData = new JSONObject();
     private static JSONObject movesStatsData = new JSONObject();
+    
+    // Cache for generated moves (per Pokemon ID)
+    private static final Cache<Integer, List<Move>> movesCache = Caffeine.newBuilder()
+        .maximumSize(200) // Cache up to 200 Pokemon move sets
+        .recordStats()
+        .build();
 
     static {
         loadMovesFromJSON();
         loadPokemonMovesFromJSON();
+        LOGGER.log(Level.INFO, "BattleService initialized with move caching");
     }
 
     /**
@@ -120,10 +135,16 @@ public class BattleService {
     }
 
     /**
-     * Generate moves for a Pokemon
-     * First tries to load from movesPokemon.json, then falls back to type-based moves
+     * Generate moves for a Pokemon with caching
+     * First tries cache, then loads from movesPokemon.json, then falls back to type-based moves
      */
     public List<Move> generateMovesForPokemon(Pokemon pokemon) {
+        // Check cache first (avoids JSON reads + generation every attack)
+        List<Move> cachedMoves = movesCache.getIfPresent(pokemon.getId());
+        if (cachedMoves != null) {
+            return new ArrayList<>(cachedMoves); // Return copy to avoid modification
+        }
+        
         List<Move> pokemonMoves = new ArrayList<>();
 
         // Try to get Pokemon-specific moves from movesPokemon.json
@@ -138,9 +159,10 @@ public class BattleService {
                     pokemonMoves.add(move);
                 }
 
-                // If we got moves from JSON, return them
+                // If we got moves from JSON, cache and return them
                 if (!pokemonMoves.isEmpty()) {
-                    LOGGER.log(Level.INFO, "Loaded {0} moves for {1} from movesPokemon.json",
+                    movesCache.put(pokemon.getId(), new ArrayList<>(pokemonMoves));
+                    LOGGER.log(Level.FINE, "Loaded {0} moves for {1} from movesPokemon.json (cached)",
                               new Object[]{pokemonMoves.size(), pokemon.getName()});
                     return pokemonMoves;
                 }
@@ -150,7 +172,7 @@ public class BattleService {
         }
 
         // Fallback: Generate moves based on Pokemon's types
-        LOGGER.log(Level.INFO, "Generating type-based moves for {0}", pokemon.getName());
+        LOGGER.log(Level.FINE, "Generating type-based moves for {0}", pokemon.getName());
 
         // Add 2 moves of primary type
         List<Move> type1Moves = getMovesOfType(pokemon.getType1());
@@ -180,6 +202,8 @@ public class BattleService {
             pokemonMoves.add(new Move("Tackle", "Normal", 40, 100));
         }
 
+        // Cache generated moves for future use
+        movesCache.put(pokemon.getId(), new ArrayList<>(pokemonMoves));
         return pokemonMoves;
     }
 
@@ -304,5 +328,18 @@ public class BattleService {
         public double getEffectiveness() {
             return effectiveness;
         }
+    }
+    
+    /**
+     * Get cache statistics for monitoring
+     */
+    public static String getCacheStats() {
+        return String.format(
+            "BattleService Moves Cache | Size: %d | Hit Rate: %.2f%% | Hits: %d | Misses: %d",
+            movesCache.estimatedSize(),
+            movesCache.stats().hitRate() * 100,
+            movesCache.stats().hitCount(),
+            movesCache.stats().missCount()
+        );
     }
 }

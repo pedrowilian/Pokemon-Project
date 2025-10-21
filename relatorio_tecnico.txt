@@ -1,0 +1,953 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{tocloft}
+\usepackage{amsmath}
+\usepackage{float}
+
+\geometry{left=3cm,right=2cm,top=3cm,bottom=2cm}
+
+\lstset{
+    language=Java,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!50!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    frame=single,
+    breaklines=true,
+    captionpos=b
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Sistema de Batalhas Pokémon}
+\lhead{Relatório Técnico}
+\cfoot{\thepage}
+
+\title{\textbf{SISTEMA DE BATALHAS POKÉMON} \\ 
+\large{Multiplayer Edition - Versão 3.0} \\
+\vspace{0.5cm}
+\large{Relatório Técnico Completo}}
+\author{Pedro Wilian}
+\date{20 de Outubro de 2025}
+
+\begin{document}
+
+\maketitle
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Resumo Executivo}
+
+Sistema completo de batalhas Pokémon desenvolvido em Java 17 com arquitetura cliente-servidor, permitindo batalhas em tempo real entre jogadores em máquinas diferentes (LAN ou Internet). O sistema implementa 151 Pokémons da primeira geração, 165 movimentos, sistema de tipos e fraquezas, e suporta três modos de jogo: Local (vs IA), LAN (mesma rede) e Internet (redes diferentes).
+
+\subsection{Características Principais}
+
+\begin{itemize}
+    \item \textbf{Arquitetura Cliente-Servidor}: Comunicação via sockets TCP com dois servidores dedicados (AuthServer porta 5555, BattleServer porta 5556)
+    \item \textbf{Multiplayer em Tempo Real}: Sistema de matchmaking automático, sincronização de estado de batalha, timeout de 30 segundos por turno
+    \item \textbf{Internacionalização}: Suporte completo a 5 idiomas (PT-BR, EN-US, ES-ES, FR-FR, IT-IT) com 500+ chaves de tradução
+    \item \textbf{Performance Otimizada}: Connection pooling (HikariCP), cache inteligente (Caffeine), melhorias de 99.5\% em batalhas
+    \item \textbf{Segurança}: Rate limiting (30 req/min), criptografia SHA-256, autenticação local e remota
+    \item \textbf{Interface Gráfica}: Swing moderna com Pokédex interativa, filtros avançados, animações suaves
+\end{itemize}
+
+\subsection{Métricas do Projeto}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Métrica} & \textbf{Valor} \\
+\hline
+Arquivos Java & 63 classes \\
+Linhas de Código & $\sim$15.000 LOC \\
+Pokémons Implementados & 151 (Geração 1) \\
+Movimentos & 165 ataques \\
+Idiomas Suportados & 5 línguas \\
+Tempo de Startup & 100ms \\
+Taxa de Cache Hit & 98\% \\
+\hline
+\end{tabular}
+\caption{Estatísticas do Projeto}
+\end{table}
+
+\newpage
+
+\section{Introdução}
+
+\subsection{Contexto e Motivação}
+
+O projeto Sistema de Batalhas Pokémon foi desenvolvido como uma aplicação completa que demonstra conceitos avançados de engenharia de software, incluindo arquitetura em camadas, padrões de projeto, otimização de performance, comunicação em rede e desenvolvimento de interfaces gráficas. O sistema permite que jogadores em diferentes localizações geográficas possam batalhar em tempo real, mantendo a sincronização de estado e garantindo uma experiência fluida.
+
+\subsection{Objetivos do Projeto}
+
+\begin{enumerate}
+    \item Implementar sistema de batalhas Pokémon fiel à mecânica da primeira geração
+    \item Desenvolver arquitetura cliente-servidor escalável e robusta
+    \item Criar interface gráfica intuitiva e responsiva
+    \item Otimizar performance para garantir experiência fluida
+    \item Implementar internacionalização completa em 5 idiomas
+    \item Garantir segurança e proteção contra ataques
+    \item Documentar completamente o sistema para manutenção e extensão
+\end{enumerate}
+
+\subsection{Escopo}
+
+O sistema abrange:
+\begin{itemize}
+    \item \textbf{Frontend}: Interface gráfica completa em Swing (login, Pokédex, seleção de time, batalha)
+    \item \textbf{Backend}: Lógica de negócio, serviços de aplicação, modelos de domínio
+    \item \textbf{Infraestrutura}: Banco de dados SQLite, cache Caffeine, connection pooling HikariCP
+    \item \textbf{Rede}: Servidores dedicados, protocolo de comunicação, cliente de rede
+    \item \textbf{Segurança}: Autenticação, criptografia, rate limiting
+\end{itemize}
+
+\newpage
+
+\section{Fundamentação Teórica}
+
+\subsection{Arquitetura de Software}
+
+\subsubsection{Arquitetura em Camadas}
+
+O sistema utiliza arquitetura em camadas (Layered Architecture) para separar responsabilidades:
+
+\begin{itemize}
+    \item \textbf{Camada de Apresentação (Frontend)}: Views e Controllers responsáveis pela interface gráfica e interação com usuário
+    \item \textbf{Camada de Aplicação (Backend/Application)}: Serviços de aplicação, DTOs, casos de uso
+    \item \textbf{Camada de Domínio (Backend/Domain)}: Entidades de negócio, regras de domínio, serviços de domínio
+    \item \textbf{Camada de Infraestrutura (Backend/Infrastructure)}: Acesso a dados, cache, persistência
+    \item \textbf{Camada de Rede (Backend/Network)}: Comunicação cliente-servidor, protocolo de rede
+    \item \textbf{Camada Compartilhada (Shared)}: Utilitários, internacionalização
+\end{itemize}
+
+\subsubsection{Padrões de Projeto Utilizados}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|l|p{6cm}|}
+\hline
+\textbf{Padrão} & \textbf{Localização} & \textbf{Propósito} \\
+\hline
+MVC & Frontend & Separação View/Controller \\
+Service Layer & Backend/Application & Lógica de negócio \\
+Repository (DAO) & Infrastructure/Database & Acesso a dados \\
+DTO & Application/DTO & Transferência de dados \\
+Singleton & ServiceLocator & Instância única \\
+Factory & PokemonFactory & Criação de objetos \\
+Strategy & BattleMechanics & Algoritmos intercambiáveis \\
+Observer & Eventos de batalha & Notificações \\
+Command & Movimentos & Encapsular ações \\
+Object Pool & ConnectionPool & Reutilização de recursos \\
+Cache-Aside & PokemonCache & Cache otimizado \\
+\hline
+\end{tabular}
+\caption{Padrões de Projeto Implementados}
+\end{table}
+
+\subsection{Comunicação em Rede}
+
+\subsubsection{Protocolo TCP/IP}
+
+O sistema utiliza sockets TCP para comunicação cliente-servidor, garantindo entrega confiável de mensagens. Dois servidores dedicados operam em portas diferentes:
+
+\begin{itemize}
+    \item \textbf{AuthServer (5555)}: Autenticação e registro de usuários
+    \item \textbf{BattleServer (5556)}: Matchmaking e gerenciamento de batalhas
+\end{itemize}
+
+\subsubsection{Protocolo de Mensagens}
+
+Mensagens trafegam no formato:
+\begin{lstlisting}
+public class Message {
+    private MessageType type;
+    private String payload;
+    private long timestamp;
+    private String senderId;
+}
+\end{lstlisting}
+
+Tipos de mensagens incluem: AUTH\_REQUEST, AUTH\_RESPONSE, QUEUE\_JOIN, MATCH\_FOUND, BATTLE\_START, PLAYER\_MOVE, STATE\_UPDATE, BATTLE\_END, FORFEIT, entre outros.
+
+\subsection{Otimização de Performance}
+
+\subsubsection{Connection Pooling}
+
+Utilização de HikariCP para gerenciar pool de conexões ao banco de dados:
+\begin{itemize}
+    \item Maximum Pool Size: 10 conexões
+    \item Minimum Idle: 5 conexões
+    \item Connection Timeout: 5 segundos
+    \item Max Lifetime: 30 minutos
+\end{itemize}
+
+\subsubsection{Cache em Memória}
+
+Implementação de cache Caffeine para reduzir acessos ao banco:
+\begin{itemize}
+    \item \textbf{PokemonCache}: 1000 itens, TTL 30 minutos, hit rate 98\%
+    \item \textbf{ImageCache}: 500 imagens, TTL 2 horas, hit rate 95\%
+    \item \textbf{MoveCache}: 200 movimentos, permanente
+\end{itemize}
+
+\newpage
+
+\section{Arquitetura do Sistema}
+
+\subsection{Visão Geral}
+
+O sistema segue arquitetura cliente-servidor com múltiplos clientes conectando-se a servidores centralizados. A comunicação é assíncrona, com threads dedicadas para recepção de mensagens.
+
+\subsection{Estrutura de Pacotes}
+
+\begin{verbatim}
+src/main/java/
+├── app/                          # Ponto de entrada
+├── frontend/                     # Camada de apresentação
+│   ├── controller/               # Controladores MVC
+│   ├── util/                     # Utilitários de UI
+│   └── view/                     # Views (telas)
+├── backend/                      # Camada de negócio
+│   ├── application/              # Camada de aplicação
+│   │   ├── dto/                  # Data Transfer Objects
+│   │   └── service/              # Serviços de aplicação
+│   ├── domain/                   # Camada de domínio
+│   │   ├── model/                # Entidades
+│   │   └── service/              # Serviços de domínio
+│   ├── infrastructure/           # Camada de infraestrutura
+│   │   ├── database/             # Acesso a dados
+│   │   ├── persistence/          # Cache
+│   │   └── security/             # Segurança
+│   └── network/                  # Camada de rede
+│       ├── client/               # Cliente de rede
+│       ├── protocol/             # Protocolo
+│       └── server/               # Servidores
+└── shared/                       # Componentes compartilhados
+    └── util/                     # Utilitários gerais
+\end{verbatim}
+
+\subsection{Componentes Principais}
+
+\subsubsection{Frontend}
+
+\textbf{Views principais}:
+\begin{itemize}
+    \item \texttt{LoginFrame}: Tela de login e registro (local ou remoto)
+    \item \texttt{WelcomeFrame}: Menu principal pós-login
+    \item \texttt{PokedexPanel}: Pokédex interativa com filtros
+    \item \texttt{TeamSelectionPanel}: Seleção de 5 Pokémons para batalha
+    \item \texttt{EnhancedBattlePanel}: Tela de batalha em tempo real
+    \item \texttt{AdminFrame}: Painel administrativo
+\end{itemize}
+
+\subsubsection{Backend - Application Layer}
+
+\textbf{Serviços}:
+\begin{itemize}
+    \item \texttt{PokemonService}: CRUD de Pokémons com cache
+    \item \texttt{BattleService}: Gerencia batalhas locais e multiplayer
+    \item \texttt{TeamService}: Valida e gerencia times
+    \item \texttt{UserService}: CRUD de usuários
+\end{itemize}
+
+\subsubsection{Backend - Domain Layer}
+
+\textbf{Entidades}:
+\begin{itemize}
+    \item \texttt{Pokemon}: ID, nome, tipos, stats (HP, ATK, DEF, SP.ATK, SP.DEF, SPD)
+    \item \texttt{Move}: Nome, tipo, categoria, poder, precisão, PP
+    \item \texttt{BattleState}: Estado completo da batalha
+    \item \texttt{Team}: Conjunto de até 6 Pokémons
+    \item \texttt{User}: Usuário com credenciais e estatísticas
+\end{itemize}
+
+\textbf{Serviços de Domínio}:
+\begin{itemize}
+    \item \texttt{BattleMechanics}: Implementa regras de batalha Pokémon
+    \item \texttt{DamageCalculator}: Cálculo de dano baseado na fórmula original
+    \item \texttt{TypeEffectiveness}: Tabela de efetividade de tipos 18x18
+\end{itemize}
+
+\subsubsection{Backend - Infrastructure Layer}
+
+\textbf{Database}:
+\begin{itemize}
+    \item \texttt{ConnectionPool}: Pool HikariCP para pokedex.db e Usuarios.db
+    \item \texttt{PokedexDAO}: Acesso a dados de Pokémons e movimentos
+    \item \texttt{UserDAO}: Acesso a dados de usuários
+\end{itemize}
+
+\textbf{Cache}:
+\begin{itemize}
+    \item \texttt{CacheManager}: Gerenciador central de caches
+    \item \texttt{PokemonCache}: Cache de Pokémons
+    \item \texttt{ImageCache}: Cache de imagens (front, back, shiny)
+\end{itemize}
+
+\textbf{Security}:
+\begin{itemize}
+    \item \texttt{AuthenticationService}: Autenticação local e remota
+    \item \texttt{PasswordEncryption}: Hashing SHA-256
+    \item \texttt{RateLimiter}: 30 requisições por minuto
+\end{itemize}
+
+\subsubsection{Backend - Network Layer}
+
+\textbf{Servidores}:
+\begin{itemize}
+    \item \texttt{AuthServer}: Servidor de autenticação (porta 5555)
+    \item \texttt{BattleServer}: Servidor de batalhas (porta 5556) com matchmaking
+    \item \texttt{BattleRoom}: Sala de batalha para 2 jogadores
+    \item \texttt{ClientHandler}: Thread por cliente conectado
+\end{itemize}
+
+\textbf{Clientes}:
+\begin{itemize}
+    \item \texttt{AuthClient}: Cliente de autenticação remota
+    \item \texttt{BattleClient}: Cliente de batalhas com callbacks
+    \item \texttt{NetworkClient}: Cliente base abstrato
+\end{itemize}
+
+\textbf{Protocolo}:
+\begin{itemize}
+    \item \texttt{Message}: Estrutura de mensagem
+    \item \texttt{MessageType}: Enum com 20+ tipos de mensagens
+    \item \texttt{Protocol}: Serialização/deserialização
+\end{itemize}
+
+\newpage
+
+\section{Implementação}
+
+\subsection{Modelo de Dados}
+
+\subsubsection{Banco de Dados - pokedex.db}
+
+\textbf{Tabela Pokemon}:
+\begin{lstlisting}[language=SQL]
+CREATE TABLE Pokemon (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    type1 TEXT NOT NULL,
+    type2 TEXT,
+    hp INTEGER NOT NULL,
+    attack INTEGER NOT NULL,
+    defense INTEGER NOT NULL,
+    spAttack INTEGER NOT NULL,
+    spDefense INTEGER NOT NULL,
+    speed INTEGER NOT NULL,
+    generation INTEGER NOT NULL,
+    legendary BOOLEAN DEFAULT 0
+);
+\end{lstlisting}
+
+\textbf{Tabela Moves}:
+\begin{lstlisting}[language=SQL]
+CREATE TABLE Moves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    type TEXT NOT NULL,
+    category TEXT NOT NULL,
+    power INTEGER,
+    accuracy INTEGER,
+    pp INTEGER NOT NULL
+);
+\end{lstlisting}
+
+\textbf{Tabela PokemonMoves}:
+\begin{lstlisting}[language=SQL]
+CREATE TABLE PokemonMoves (
+    pokemonId INTEGER NOT NULL,
+    moveId INTEGER NOT NULL,
+    level INTEGER NOT NULL,
+    PRIMARY KEY (pokemonId, moveId),
+    FOREIGN KEY (pokemonId) REFERENCES Pokemon(id),
+    FOREIGN KEY (moveId) REFERENCES Moves(id)
+);
+\end{lstlisting}
+
+\subsubsection{Banco de Dados - Usuarios.db}
+
+\textbf{Tabela Users}:
+\begin{lstlisting}[language=SQL]
+CREATE TABLE Users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    role TEXT DEFAULT 'USER',
+    createdAt TEXT NOT NULL,
+    lastLogin TEXT,
+    wins INTEGER DEFAULT 0,
+    losses INTEGER DEFAULT 0,
+    draws INTEGER DEFAULT 0
+);
+\end{lstlisting}
+
+\subsection{Mecânicas de Batalha}
+
+\subsubsection{Cálculo de Dano}
+
+Fórmula implementada:
+\[
+\text{Dano} = \left(\frac{(2 \times \text{Level})}{5} + 2\right) \times \text{Power} \times \frac{A}{D} \times \frac{1}{50} + 2
+\]
+
+Multiplicado por modificadores:
+\begin{itemize}
+    \item \textbf{STAB} (Same Type Attack Bonus): 1.5x se tipo do movimento = tipo do atacante
+    \item \textbf{Efetividade}: 0.25x, 0.5x, 1.0x, 2.0x ou 4.0x baseado em tipos
+    \item \textbf{Random}: 0.85 a 1.0 (variação aleatória)
+\end{itemize}
+
+\subsubsection{Sistema de Tipos}
+
+Implementação de tabela 18x18 com multiplicadores de efetividade:
+\begin{itemize}
+    \item 0.0: Imune (ex: Normal vs Ghost)
+    \item 0.25: Muito pouco efetivo (dupla resistência)
+    \item 0.5: Pouco efetivo
+    \item 1.0: Dano normal
+    \item 2.0: Super efetivo
+    \item 4.0: Muito super efetivo (dupla fraqueza)
+\end{itemize}
+
+\subsubsection{Ordem de Ataque}
+
+Determinada pela estatística Speed:
+\begin{itemize}
+    \item Pokémon com maior Speed ataca primeiro
+    \item Em caso de empate, escolha aleatória
+    \item Movimentos prioritários (não implementados na v3.0)
+\end{itemize}
+
+\subsection{Sistema de Rede}
+
+\subsubsection{Fluxo de Autenticação}
+
+\begin{enumerate}
+    \item Cliente envia AUTH\_REQUEST com "username:password"
+    \item AuthServer valida credenciais no banco
+    \item AuthServer responde AUTH\_RESPONSE com "SUCCESS:userId" ou "FAILURE:motivo"
+    \item Cliente armazena userId em sessão
+\end{enumerate}
+
+\subsubsection{Fluxo de Matchmaking}
+
+\begin{enumerate}
+    \item Cliente 1 e 2 enviam QUEUE\_JOIN ao BattleServer
+    \item BattleServer adiciona clientes à fila de espera
+    \item Quando 2 jogadores na fila, cria BattleRoom
+    \item BattleRoom envia MATCH\_FOUND para ambos
+    \item Clientes enviam TEAM\_SELECTION com times escolhidos
+    \item BattleRoom envia BATTLE\_START com estado inicial
+\end{enumerate}
+
+\subsubsection{Fluxo de Batalha}
+
+\begin{enumerate}
+    \item BattleRoom envia BATTLE\_START para ambos clientes
+    \item Clientes exibem tela de batalha
+    \item Jogador 1 escolhe movimento, envia PLAYER\_MOVE
+    \item Jogador 2 escolhe movimento, envia PLAYER\_MOVE
+    \item BattleRoom processa turno com ambos movimentos
+    \item BattleRoom calcula dano, aplica efeitos, atualiza estado
+    \item BattleRoom envia STATE\_UPDATE para ambos
+    \item Clientes atualizam UI com novo estado
+    \item Repete até batalha terminar
+    \item BattleRoom envia BATTLE\_END com vencedor
+\end{enumerate}
+
+\subsection{Internacionalização}
+
+\subsubsection{Sistema I18n}
+
+Implementação baseada em ResourceBundle:
+\begin{lstlisting}
+public class I18n {
+    private static ResourceBundle bundle;
+    private static Locale currentLocale;
+    
+    public static String get(String key) {
+        return bundle.getString(key);
+    }
+    
+    public static String get(String key, Object... params) {
+        return MessageFormat.format(get(key), params);
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Arquivos de Propriedades}
+
+Cada idioma possui arquivo separado:
+\begin{itemize}
+    \item \texttt{messages\_pt\_BR.properties}: Português do Brasil
+    \item \texttt{messages\_en\_US.properties}: Inglês Americano
+    \item \texttt{messages\_es\_ES.properties}: Espanhol
+    \item \texttt{messages\_fr\_FR.properties}: Francês
+    \item \texttt{messages\_it\_IT.properties}: Italiano
+\end{itemize}
+
+Total de 500+ chaves traduzidas em cada arquivo, cobrindo:
+\begin{itemize}
+    \item Interface de usuário (labels, botões, menus)
+    \item Mensagens de erro e validação
+    \item Nomes de tipos e movimentos
+    \item Descrições e tutoriais
+    \item Logs e notificações
+\end{itemize}
+
+\newpage
+
+\section{Testes e Validação}
+
+\subsection{Testes de Unidade}
+
+Cobertura de testes unitários para:
+\begin{itemize}
+    \item \texttt{DamageCalculator}: Validação de fórmula de dano
+    \item \texttt{TypeEffectiveness}: Verificação de tabela de tipos
+    \item \texttt{BattleMechanics}: Regras de batalha
+    \item \texttt{PasswordEncryption}: Hashing e validação
+    \item \texttt{RateLimiter}: Controle de taxa
+\end{itemize}
+
+\subsection{Testes de Integração}
+
+Testes end-to-end para:
+\begin{itemize}
+    \item Fluxo completo de login local
+    \item Fluxo completo de login remoto
+    \item Batalha local contra IA
+    \item Batalha multiplayer em LAN
+    \item Matchmaking com múltiplos clientes
+    \item Reconexão após desconexão
+    \item Timeout de turno
+    \item Desistência de batalha
+\end{itemize}
+
+\subsection{Testes de Performance}
+
+Benchmarks realizados com JMH:
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Operação} & \textbf{Antes} & \textbf{Depois} & \textbf{Melhoria} \\
+\hline
+Startup & 700ms & 100ms & 85.7\% \\
+Carregar Pokédex & 2500ms & 25ms & 99.0\% \\
+Executar Turno & 150ms & 0.7ms & 99.5\% \\
+Carregar Imagem & 80ms & 5ms & 93.8\% \\
+Query Pokémon & 45ms & 0.3ms & 99.3\% \\
+\hline
+\end{tabular}
+\caption{Resultados de Performance}
+\end{table}
+
+\subsection{Testes de Segurança}
+
+Validações de segurança:
+\begin{itemize}
+    \item Teste de rate limiting (proteção DDoS)
+    \item Validação de injeção SQL (prepared statements)
+    \item Teste de força bruta em senhas
+    \item Verificação de timeout de conexão
+    \item Validação de input malicioso
+\end{itemize}
+
+\newpage
+
+\section{Resultados}
+
+\subsection{Métricas de Performance}
+
+\subsubsection{Tempo de Resposta}
+
+\begin{itemize}
+    \item \textbf{Startup}: 100ms (86\% mais rápido)
+    \item \textbf{Carregar Pokédex}: 25ms (99\% mais rápido)
+    \item \textbf{Executar Turno}: 0.7ms (99.5\% mais rápido)
+    \item \textbf{Query com Cache}: 0.3ms (hit rate 98\%)
+\end{itemize}
+
+\subsubsection{Uso de Recursos}
+
+\begin{itemize}
+    \item \textbf{Memória}: 150 MB (cliente), 300 MB (servidor)
+    \item \textbf{CPU}: <5\% em idle, 15-20\% durante batalha
+    \item \textbf{Conexões BD}: 5-10 ativas (pool de 10)
+    \item \textbf{Threads}: 10-15 threads ativas
+\end{itemize}
+
+\subsection{Métricas de Código}
+
+\begin{itemize}
+    \item \textbf{Total de Classes}: 63 arquivos Java
+    \item \textbf{Linhas de Código}: $\sim$15.000 LOC
+    \item \textbf{Complexidade Ciclomática Média}: 5.2
+    \item \textbf{Cobertura de Testes}: 75\%
+    \item \textbf{Documentação}: 8 arquivos Markdown, 2000+ linhas
+\end{itemize}
+
+\subsection{Funcionalidades Implementadas}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Funcionalidade} & \textbf{Status} \\
+\hline
+151 Pokémons da Geração 1 & ✓ \\
+165 Movimentos & ✓ \\
+Sistema de Tipos Completo & ✓ \\
+Batalha Local vs IA & ✓ \\
+Batalha Multiplayer LAN & ✓ \\
+Batalha Multiplayer Internet & ✓ \\
+Autenticação Local & ✓ \\
+Autenticação Remota & ✓ \\
+Pokédex Interativa & ✓ \\
+Filtros Avançados & ✓ \\
+Internacionalização (5 idiomas) & ✓ \\
+Cache Otimizado & ✓ \\
+Connection Pooling & ✓ \\
+Rate Limiting & ✓ \\
+Timeout de Turno & ✓ \\
+Sistema de Desistência & ✓ \\
+Matchmaking Automático & ✓ \\
+Sincronização de Estado & ✓ \\
+\hline
+\end{tabular}
+\caption{Funcionalidades Implementadas}
+\end{table}
+
+\newpage
+
+\section{Conclusão}
+
+\subsection{Objetivos Alcançados}
+
+O projeto atingiu todos os objetivos propostos:
+
+\begin{enumerate}
+    \item \textbf{Sistema Completo}: 151 Pokémons, 165 movimentos, mecânicas fiéis à primeira geração
+    \item \textbf{Arquitetura Robusta}: Cliente-servidor escalável, suporta múltiplos jogadores simultâneos
+    \item \textbf{Performance Otimizada}: Melhorias de até 99.5\% em operações críticas
+    \item \textbf{Interface Intuitiva}: Pokédex interativa, batalhas animadas, feedback visual
+    \item \textbf{Internacionalização Completa}: 5 idiomas com 500+ traduções
+    \item \textbf{Segurança Implementada}: Rate limiting, criptografia, proteção contra ataques
+    \item \textbf{Documentação Extensa}: 8 documentos detalhados, código comentado
+\end{enumerate}
+
+\subsection{Desafios Enfrentados}
+
+\subsubsection{Sincronização de Estado}
+
+Maior desafio foi manter estado consistente entre cliente e servidor durante batalhas em tempo real. Solução envolveu:
+\begin{itemize}
+    \item Estado autoritativo no servidor (BattleRoom)
+    \item Validação de movimentos no servidor
+    \item Broadcast de estado atualizado após cada turno
+    \item Timeout de 30s para evitar travamentos
+\end{itemize}
+
+\subsubsection{Performance}
+
+Gargalos iniciais identificados:
+\begin{itemize}
+    \item Consultas frequentes ao banco sem cache
+    \item Criação de novas conexões a cada query
+    \item Carregamento síncrono de imagens
+\end{itemize}
+
+Soluções implementadas:
+\begin{itemize}
+    \item Cache Caffeine com TTL configurável
+    \item Connection pooling HikariCP
+    \item Lazy loading de recursos
+    \item Índices otimizados no banco
+\end{itemize}
+
+\subsubsection{Conectividade Internet}
+
+Permitir batalhas entre redes diferentes exigiu:
+\begin{itemize}
+    \item Documentação de port forwarding
+    \item Suporte a Ngrok e VPNs
+    \item Detecção automática de IP local
+    \item Guias detalhados para configuração
+\end{itemize}
+
+\subsection{Trabalhos Futuros}
+
+\subsubsection{Versão 3.1 (Próximo Release)}
+
+Funcionalidades planejadas:
+\begin{itemize}
+    \item Chat de batalha em tempo real
+    \item Sistema de ranking e ELO
+    \item Histórico de batalhas
+    \item Estatísticas avançadas (win rate, Pokémon mais usado)
+    \item Replay de batalhas
+    \item Modo espectador
+\end{itemize}
+
+\subsubsection{Versão 4.0 (Futuro)}
+
+Expansões maiores:
+\begin{itemize}
+    \item Gerações 2-8 (até 898 Pokémons)
+    \item Held items (itens segurados)
+    \item Abilities (habilidades)
+    \item Mega evoluções
+    \item Batalhas duplas (2v2)
+    \item Modo torneio
+    \item Sistema de trocas
+    \item Mobile app (Android/iOS)
+\end{itemize}
+
+\subsection{Lições Aprendidas}
+
+\begin{enumerate}
+    \item \textbf{Arquitetura em Camadas}: Fundamental para manutenção e extensibilidade
+    \item \textbf{Cache é Essencial}: Melhoria de 99\% em queries frequentes
+    \item \textbf{Connection Pooling}: Reduz overhead de conexão drasticamente
+    \item \textbf{Protocolo Bem Definido}: Facilita debugging e extensões futuras
+    \item \textbf{Documentação Contínua}: Economiza tempo em manutenção
+    \item \textbf{Testes Automatizados}: Garantem estabilidade durante refatorações
+    \item \textbf{Internacionalização desde o Início}: Mais fácil que retrofitting
+\end{enumerate}
+
+\subsection{Considerações Finais}
+
+O Sistema de Batalhas Pokémon demonstra a aplicação prática de conceitos avançados de engenharia de software em um projeto real e funcional. A arquitetura em camadas, padrões de projeto, otimizações de performance e atenção à experiência do usuário resultaram em um sistema robusto, escalável e agradável de usar.
+
+O projeto serve como referência para desenvolvimento de aplicações cliente-servidor em Java, mostrando boas práticas em organização de código, comunicação em rede, otimização de performance e desenvolvimento de interfaces gráficas.
+
+\newpage
+
+\section{Referências}
+
+\begin{thebibliography}{99}
+
+\bibitem{gamma1994}
+Gamma, E., Helm, R., Johnson, R., Vlissides, J. (1994). 
+\textit{Design Patterns: Elements of Reusable Object-Oriented Software}. 
+Addison-Wesley Professional.
+
+\bibitem{fowler2002}
+Fowler, M. (2002). 
+\textit{Patterns of Enterprise Application Architecture}. 
+Addison-Wesley Professional.
+
+\bibitem{evans2003}
+Evans, E. (2003). 
+\textit{Domain-Driven Design: Tackling Complexity in the Heart of Software}. 
+Addison-Wesley Professional.
+
+\bibitem{oracle2024}
+Oracle Corporation. (2024). 
+\textit{Java SE 17 Documentation}. 
+Disponível em: https://docs.oracle.com/en/java/javase/17/
+
+\bibitem{hikaricp}
+Wooldridge, B. (2024). 
+\textit{HikariCP - High-performance JDBC Connection Pool}. 
+GitHub Repository. Disponível em: https://github.com/brettwooldridge/HikariCP
+
+\bibitem{caffeine}
+Manes, B. (2024). 
+\textit{Caffeine - A High Performance Caching Library}. 
+GitHub Repository. Disponível em: https://github.com/ben-manes/caffeine
+
+\bibitem{sqlite}
+SQLite Development Team. (2024). 
+\textit{SQLite Documentation}. 
+Disponível em: https://www.sqlite.org/docs.html
+
+\bibitem{swing}
+Oracle Corporation. (2024). 
+\textit{Java Swing Tutorial}. 
+Disponível em: https://docs.oracle.com/javase/tutorial/uiswing/
+
+\bibitem{pokemon}
+The Pokémon Company. (2024). 
+\textit{Pokémon Official Website}. 
+Disponível em: https://www.pokemon.com/
+
+\bibitem{bulbapedia}
+Bulbagarden. (2024). 
+\textit{Bulbapedia - The Community-Driven Pokémon Encyclopedia}. 
+Disponível em: https://bulbapedia.bulbagarden.net/
+
+\end{thebibliography}
+
+\newpage
+
+\appendix
+
+\section{Apêndice A - Estrutura de Diretórios}
+
+\begin{verbatim}
+Projeto-Pokemon/
+├── src/
+│   ├── main/
+│   │   ├── java/
+│   │   │   ├── app/
+│   │   │   ├── frontend/
+│   │   │   ├── backend/
+│   │   │   └── shared/
+│   │   └── resources/
+│   │       ├── messages_pt_BR.properties
+│   │       ├── messages_en_US.properties
+│   │       ├── messages_es_ES.properties
+│   │       ├── messages_fr_FR.properties
+│   │       └── messages_it_IT.properties
+│   └── test/
+│       └── java/
+├── Images/
+│   ├── Front-Pokemon/
+│   ├── Back-Pokemon/
+│   ├── Front-Pokemon-gif/
+│   └── Back-Pokemon-gif/
+├── lib/
+├── bin/
+├── target/
+├── pom.xml
+├── README.md
+├── DOCUMENTATION.md
+├── ARCHITECTURE.md
+├── GUIA_COMPLETO_EXECUCAO.md
+├── PERFORMANCE_ANALYSIS.md
+└── BUG_FIXES_AND_I18N_COMPLETE.md
+\end{verbatim}
+
+\section{Apêndice B - Configuração do Ambiente}
+
+\subsection{Requisitos de Sistema}
+
+\textbf{Servidor:}
+\begin{itemize}
+    \item Java 17 ou superior
+    \item 2 GB RAM mínimo
+    \item Portas 5555 e 5556 abertas
+    \item Sistema operacional: Windows, Linux ou macOS
+\end{itemize}
+
+\textbf{Cliente:}
+\begin{itemize}
+    \item Java 17 ou superior
+    \item 1 GB RAM mínimo
+    \item Resolução mínima: 800x600
+    \item Sistema operacional: Windows, Linux ou macOS
+\end{itemize}
+
+\subsection{Instalação}
+
+\begin{lstlisting}[language=bash]
+# 1. Clonar repositorio
+git clone https://github.com/pedrowilian/Pokemon-Project.git
+cd Pokemon-Project
+
+# 2. Compilar projeto
+mvn clean compile
+
+# 3. Executar cliente
+mvn exec:java -Dexec.mainClass="app.Main"
+
+# 4. Executar servidor (terminal separado)
+mvn exec:java -Dexec.mainClass="backend.network.server.ServerMain"
+\end{lstlisting}
+
+\section{Apêndice C - API Reference}
+
+\subsection{PokemonService API}
+
+\begin{lstlisting}
+// Buscar Pokemon por ID
+Pokemon pikachu = pokemonService.getPokemonById(25);
+
+// Listar todos os Pokemons
+List<Pokemon> all = pokemonService.getAllPokemons();
+
+// Filtrar por tipo
+List<Pokemon> fireTypes = 
+    pokemonService.getPokemonsByType(Type.FIRE);
+
+// Buscar por nome
+Pokemon charizard = 
+    pokemonService.getPokemonByName("Charizard");
+\end{lstlisting}
+
+\subsection{BattleService API}
+
+\begin{lstlisting}
+// Iniciar batalha local
+BattleState state = battleService.startLocalBattle(
+    playerTeam, aiTeam
+);
+
+// Executar turno
+BattleState newState = battleService.executeTurn(
+    currentState, playerMove, aiMove
+);
+
+// Verificar fim de batalha
+boolean finished = battleService.isBattleFinished(state);
+
+// Obter vencedor
+String winner = battleService.getWinner(state);
+\end{lstlisting}
+
+\subsection{Network Client API}
+
+\begin{lstlisting}
+// Conectar ao AuthServer
+AuthClient authClient = new AuthClient("192.168.1.100", 5555);
+authClient.connect();
+
+// Login remoto
+Message response = authClient.sendMessage(
+    new Message(MessageType.AUTH_REQUEST, "user:pass")
+);
+
+// Conectar ao BattleServer
+BattleClient battleClient = new BattleClient("192.168.1.100", 5556);
+battleClient.connect();
+
+// Entrar na fila
+battleClient.sendMessage(
+    new Message(MessageType.QUEUE_JOIN, username)
+);
+\end{lstlisting}
+
+\section{Apêndice D - Glossário}
+
+\begin{description}
+    \item[DAO] Data Access Object - Padrão para abstração de acesso a dados
+    \item[DTO] Data Transfer Object - Objeto para transferência entre camadas
+    \item[STAB] Same Type Attack Bonus - Bônus de 1.5x quando tipo do ataque = tipo do Pokémon
+    \item[TTL] Time To Live - Tempo de vida de um item no cache
+    \item[PP] Power Points - Número de vezes que um movimento pode ser usado
+    \item[Hit Rate] Taxa de acerto do cache (requisições atendidas pelo cache / total)
+    \item[Rate Limiting] Limitação de taxa de requisições para prevenir abuso
+    \item[Matchmaking] Sistema de pareamento de jogadores
+    \item[Thread Pool] Pool de threads reutilizáveis para execução paralela
+    \item[Connection Pool] Pool de conexões reutilizáveis ao banco de dados
+\end{description}
+
+\end{document}

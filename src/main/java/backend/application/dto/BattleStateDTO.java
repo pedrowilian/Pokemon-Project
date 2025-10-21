@@ -10,8 +10,8 @@ import java.util.List;
 public class BattleStateDTO implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private List<PokemonDTO> playerTeam;
-    private List<PokemonDTO> enemyTeam;
+    private List<PokemonBattleStatsDTO> playerTeam;
+    private List<PokemonBattleStatsDTO> enemyTeam;
     private int playerActivePokemonIndex;
     private int enemyActivePokemonIndex;
     private String currentTurn;
@@ -24,19 +24,19 @@ public class BattleStateDTO implements Serializable {
     }
 
     // Getters and Setters
-    public List<PokemonDTO> getPlayerTeam() {
+    public List<PokemonBattleStatsDTO> getPlayerTeam() {
         return playerTeam;
     }
 
-    public void setPlayerTeam(List<PokemonDTO> playerTeam) {
+    public void setPlayerTeam(List<PokemonBattleStatsDTO> playerTeam) {
         this.playerTeam = playerTeam;
     }
 
-    public List<PokemonDTO> getEnemyTeam() {
+    public List<PokemonBattleStatsDTO> getEnemyTeam() {
         return enemyTeam;
     }
 
-    public void setEnemyTeam(List<PokemonDTO> enemyTeam) {
+    public void setEnemyTeam(List<PokemonBattleStatsDTO> enemyTeam) {
         this.enemyTeam = enemyTeam;
     }
 

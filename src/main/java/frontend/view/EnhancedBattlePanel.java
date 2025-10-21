@@ -22,6 +22,7 @@ import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,6 +42,8 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 
+import backend.application.dto.DTOMapper;
+import backend.application.dto.MoveDTO;
 import backend.application.service.BattleService;
 import backend.application.service.BattleService.BattleResult;
 import backend.domain.model.BattleState;
@@ -49,6 +52,7 @@ import backend.domain.model.Pokemon;
 import backend.domain.model.PokemonBattleStats;
 import backend.domain.model.Team;
 import backend.infrastructure.ServiceLocator;
+import backend.network.client.BattleClient;
 import shared.util.I18n;
 
 /**
@@ -69,8 +73,16 @@ public class EnhancedBattlePanel extends JPanel {
     private static final String FRONT_IMAGE_DIR = "Images/Front-Pokemon-gif/";
     private static final String ICON_IMAGE_DIR = "Images/Image-Pokedex/";
 
+    // Battle Mode
+    public enum BattleMode {
+        LOCAL,      // Batalha local contra IA
+        MULTIPLAYER // Batalha online contra outro jogador
+    }
+
     // Services (from backend)
     private final BattleService battleService;
+    private BattleClient battleClient; // Para modo multiplayer
+    private BattleMode battleMode; // Não final para permitir fallback LOCAL
 
     // Domain models (from backend)
     private final BattleState battleState;
@@ -80,6 +92,13 @@ public class EnhancedBattlePanel extends JPanel {
     // UI state
     private final String username;
     private final JFrame parentFrame;
+    
+    // Multiplayer state
+    private String battleId;
+    private String opponentName;
+    private boolean isMyTurn = false;
+    private javax.swing.Timer turnTimeoutTimer; // Timer para timeout de turno
+    private static final int TURN_TIMEOUT_SECONDS = 30;
 
     // UI Components
     private JLabel playerNameLabel, enemyNameLabel;
@@ -101,11 +120,34 @@ public class EnhancedBattlePanel extends JPanel {
     private List<Move> playerMoves;
     private List<Move> enemyMoves;
 
+    /**
+     * Construtor original - Modo LOCAL (contra IA)
+     */
     public EnhancedBattlePanel(List<Pokemon> playerPokemonList, List<Pokemon> enemyPokemonList,
                               String username, JFrame parentFrame) {
+        this(playerPokemonList, enemyPokemonList, username, parentFrame, BattleMode.LOCAL, null, null);
+    }
+
+    /**
+     * Construtor para MULTIPLAYER
+     */
+    public EnhancedBattlePanel(List<Pokemon> playerPokemonList, List<Pokemon> enemyPokemonList,
+                              String username, JFrame parentFrame, 
+                              String serverHost, int serverPort) {
+        this(playerPokemonList, enemyPokemonList, username, parentFrame, 
+             BattleMode.MULTIPLAYER, serverHost, String.valueOf(serverPort));
+    }
+
+    /**
+     * Construtor principal unificado
+     */
+    private EnhancedBattlePanel(List<Pokemon> playerPokemonList, List<Pokemon> enemyPokemonList,
+                               String username, JFrame parentFrame, 
+                               BattleMode mode, String serverHost, String serverPort) {
         // Initialize services
         ServiceLocator serviceLocator = ServiceLocator.getInstance();
         this.battleService = serviceLocator.getBattleService();
+        this.battleMode = mode;
 
         // Create teams (converts List<Pokemon> to Team with PokemonBattleStats)
         this.playerTeam = new Team("Player", playerPokemonList);
@@ -118,6 +160,11 @@ public class EnhancedBattlePanel extends JPanel {
         this.username = username;
         this.parentFrame = parentFrame;
 
+        // Setup multiplayer if needed
+        if (mode == BattleMode.MULTIPLAYER && serverHost != null) {
+            setupMultiplayer(serverHost, Integer.parseInt(serverPort));
+        }
+
         // Generate moves for active Pokemon
         loadMoves();
 
@@ -127,6 +174,226 @@ public class EnhancedBattlePanel extends JPanel {
         // Initialize UI
         initializeUI();
         startBattle();
+    }
+    
+    /**
+     * Configura conexão multiplayer
+     */
+    private void setupMultiplayer(String host, int port) {
+        try {
+            battleClient = new BattleClient(host, port);
+            boolean connected = battleClient.connect();
+            
+            if (!connected) {
+                JOptionPane.showMessageDialog(this,
+                    "❌ Não foi possível conectar ao servidor de batalhas!\n" +
+                    "Servidor: " + host + ":" + port,
+                    "Erro de Conexão",
+                    JOptionPane.ERROR_MESSAGE);
+                battleMode = BattleMode.LOCAL; // Fallback para local
+                return;
+            }
+            
+            // Configura callback para eventos do servidor
+            battleClient.setEventCallback(this::handleServerEvent);
+            
+            // Entra na fila de batalha
+            BattleClient.BattleQueueResult result = battleClient.joinQueue(username);
+            
+            if (!result.success) {
+                JOptionPane.showMessageDialog(this,
+                    "❌ Erro ao entrar na fila: " + result.opponent,
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            
+            if ("WAITING_OPPONENT".equals(result.status)) {
+                battleId = result.battleId;
+                JOptionPane.showMessageDialog(this,
+                    I18n.get("battle.multiplayer.searching") + "\n" +
+                    "Sala: " + battleId,
+                    I18n.get("battle.multiplayer.connect.title"),
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else if ("BATTLE_STARTED".equals(result.status)) {
+                battleId = result.battleId;
+                opponentName = result.opponent;
+                isMyTurn = true; // Quem conectou segundo espera
+                JOptionPane.showMessageDialog(this,
+                    I18n.get("battle.multiplayer.found") + "\n" +
+                    "Adversário: " + opponentName +
+                    "\nSala: " + battleId,
+                    I18n.get("battle.multiplayer.connect.title"),
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            
+            LOGGER.log(Level.INFO, "🎮 Modo Multiplayer ativado: {0}", result.status);
+            
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Erro ao configurar multiplayer", e);
+            JOptionPane.showMessageDialog(this,
+                "❌ Erro ao configurar multiplayer: " + e.getMessage(),
+                "Erro",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Processa eventos do servidor (multiplayer)
+     */
+    private void handleServerEvent(Map<String, Object> event) {
+        SwingUtilities.invokeLater(() -> {
+            String eventType = (String) event.get("event");
+            
+            switch (eventType) {
+                case "ATTACK":
+                    handleOpponentAttack(event);
+                    break;
+                    
+                case "SWITCH":
+                    handleOpponentSwitch(event);
+                    break;
+                    
+                case "OPPONENT_LEFT":
+                    handleOpponentLeft(event);
+                    break;
+                    
+                default:
+                    LOGGER.log(Level.INFO, "Evento desconhecido: {0}", eventType);
+            }
+        });
+    }
+    
+    private void handleOpponentAttack(Map<String, Object> event) {
+        String attacker = (String) event.get("attacker");
+        int moveIndex = ((Double) event.get("moveIndex")).intValue();
+        String nextTurn = (String) event.get("nextTurn");
+        
+        stopTurnTimeout(); // Cancela timeout quando oponente responde
+        
+        isMyTurn = username.equals(nextTurn);
+        
+        // Atualiza mensagem de batalha
+        showBattleMessage("🎯 " + attacker + " atacou!", 2000, null);
+        
+        // Força atualização da UI
+        updatePlayerInfo();
+        updateEnemyInfo();
+        updateHealthBar(true);
+        updateHealthBar(false);
+        updateTeamSlots();
+        updateAttackButtons();
+        
+        if (isMyTurn) {
+            enableControls(); // Habilita controles se for vez do jogador
+        }
+    }
+    
+    private void handleOpponentSwitch(Map<String, Object> event) {
+        String player = (String) event.get("player");
+        int pokemonIndex = ((Double) event.get("pokemonIndex")).intValue();
+        String nextTurn = (String) event.get("nextTurn");
+        
+        stopTurnTimeout(); // Cancela timeout
+        
+        isMyTurn = username.equals(nextTurn);
+        
+        // Atualiza mensagem de batalha
+        showBattleMessage("🔄 " + player + " trocou de Pokémon!", 2000, null);
+        
+        // Força atualização da UI
+        updatePlayerInfo();
+        updateEnemyInfo();
+        updateHealthBar(true);
+        updateHealthBar(false);
+        updateTeamSlots();
+        updateAttackButtons();
+        
+        if (isMyTurn) {
+            enableControls(); // Habilita controles
+        }
+    }
+    
+    private void handleOpponentLeft(Map<String, Object> event) {
+        String player = (String) event.get("player");
+        
+        stopTurnTimeout(); // Para o timer se estava rodando
+        
+        JOptionPane.showMessageDialog(this,
+            "🚪 " + player + " saiu da batalha!\n" +
+            "Você venceu por W.O.!",
+            "Oponente Desconectou",
+            JOptionPane.INFORMATION_MESSAGE);
+        
+        // Encerra batalha como vitória do jogador
+        endBattle(true);
+    }
+    
+    /**
+     * Jogador desiste da batalha multiplayer
+     */
+    private void forfeitBattle() {
+        int confirm = JOptionPane.showConfirmDialog(this,
+            I18n.get("battle.forfeit.confirm.message"),
+            I18n.get("battle.forfeit.confirm.title"),
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.WARNING_MESSAGE);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+            if (battleClient != null) {
+                try {
+                    battleClient.disconnect();
+                } catch (Exception e) {
+                    LOGGER.log(Level.WARNING, "Erro ao desconectar do servidor", e);
+                }
+            }
+            
+            JOptionPane.showMessageDialog(this,
+                I18n.get("battle.forfeit.result.message"),
+                I18n.get("battle.forfeit.result.title"),
+                JOptionPane.INFORMATION_MESSAGE);
+            
+            endBattle(false);
+        }
+    }
+    
+    /**
+     * Inicia timer de timeout para turno do oponente
+     */
+    private void startTurnTimeout() {
+        stopTurnTimeout(); // Para qualquer timer anterior
+        
+        turnTimeoutTimer = new javax.swing.Timer(TURN_TIMEOUT_SECONDS * 1000, e -> {
+            JOptionPane.showMessageDialog(this,
+                I18n.get("battle.timeout.message"),
+                I18n.get("battle.timeout.title"),
+                JOptionPane.INFORMATION_MESSAGE);
+            
+            if (battleClient != null) {
+                try {
+                    battleClient.disconnect();
+                } catch (Exception ex) {
+                    LOGGER.log(Level.WARNING, "Erro ao desconectar", ex);
+                }
+            }
+            
+            endBattle(true);
+        });
+        
+        turnTimeoutTimer.setRepeats(false);
+        turnTimeoutTimer.start();
+        
+        LOGGER.log(Level.INFO, "⏱️ Timeout iniciado: {0}s", TURN_TIMEOUT_SECONDS);
+    }
+    
+    /**
+     * Para timer de timeout
+     */
+    private void stopTurnTimeout() {
+        if (turnTimeoutTimer != null && turnTimeoutTimer.isRunning()) {
+            turnTimeoutTimer.stop();
+            LOGGER.log(Level.INFO, "⏱️ Timeout cancelado");
+        }
     }
 
     private void loadMoves() {
@@ -492,7 +759,8 @@ public class EnhancedBattlePanel extends JPanel {
         for (int i = 0; i < 4; i++) {
             final int index = i;
             Move move = (i < playerMoves.size()) ? playerMoves.get(i) : new Move("Tackle", "normal", 40, 100);
-            attackButtons[i] = PokemonUtils.createAttackButton(move, e -> executePlayerAttack(playerMoves.get(index)));
+            MoveDTO moveDTO = DTOMapper.toDTO(move);
+            attackButtons[i] = PokemonUtils.createAttackButton(moveDTO, e -> executePlayerAttack(playerMoves.get(index)));
             attackPanel.add(attackButtons[i]);
         }
 
@@ -505,8 +773,14 @@ public class EnhancedBattlePanel extends JPanel {
         switchButton.addActionListener(e -> showSwitchDialog());
         actionPanel.add(switchButton);
 
-        runButton = PokemonUtils.createActionButton(I18n.get("battle.button.run"), new Color(231, 76, 60));
-        runButton.addActionListener(e -> endBattle(false));
+        // Botão Run/Desistir - funcionalidade diferente baseado no modo
+        if (battleMode == BattleMode.MULTIPLAYER) {
+            runButton = PokemonUtils.createActionButton(I18n.get("battle.forfeit.button"), new Color(231, 76, 60));
+            runButton.addActionListener(e -> forfeitBattle());
+        } else {
+            runButton = PokemonUtils.createActionButton(I18n.get("battle.button.run"), new Color(231, 76, 60));
+            runButton.addActionListener(e -> endBattle(false));
+        }
         actionPanel.add(runButton);
 
         panel.add(actionPanel, BorderLayout.SOUTH);
@@ -555,6 +829,36 @@ public class EnhancedBattlePanel extends JPanel {
             return;
         }
 
+        // 🎮 MODO MULTIPLAYER: Envia ataque para o servidor
+        if (battleMode == BattleMode.MULTIPLAYER) {
+            if (!isMyTurn) {
+                showBattleMessage("⏳ Aguarde sua vez!", 1000, null);
+                return;
+            }
+            
+            // Encontra o índice do golpe
+            int moveIndex = playerMoves.indexOf(move);
+            if (moveIndex == -1) {
+                LOGGER.log(Level.WARNING, "Movimento não encontrado na lista");
+                return;
+            }
+            
+            // Envia ataque para o servidor
+            BattleClient.BattleActionResult result = battleClient.attack(moveIndex);
+            
+            if (!result.success) {
+                showBattleMessage("❌ Erro ao enviar ataque: " + result.message, 1500, null);
+                return;
+            }
+            
+            isMyTurn = false;
+            disableControls(); // Desabilita botões enquanto aguarda
+            showBattleMessage("⏳ Aguardando oponente...", 1500, null);
+            startTurnTimeout(); // Inicia timeout de 30s
+            return;
+        }
+
+        // 🏠 MODO LOCAL: Lógica normal contra IA
         isProcessing = true;
         disableControls();
 
@@ -653,6 +957,28 @@ public class EnhancedBattlePanel extends JPanel {
     }
 
     private void switchPlayerPokemon(int newIndex) {
+        // 🎮 MODO MULTIPLAYER: Envia troca para o servidor
+        if (battleMode == BattleMode.MULTIPLAYER) {
+            if (!isMyTurn) {
+                showBattleMessage("⏳ Aguarde sua vez!", 1000, null);
+                return;
+            }
+            
+            BattleClient.BattleActionResult result = battleClient.switchPokemon(newIndex);
+            
+            if (!result.success) {
+                showBattleMessage("❌ Erro ao trocar: " + result.message, 1500, null);
+                return;
+            }
+            
+            isMyTurn = false;
+            disableControls(); // Desabilita botões
+            showBattleMessage("⏳ Aguardando oponente...", 1500, null);
+            startTurnTimeout(); // Inicia timeout
+            return;
+        }
+
+        // 🏠 MODO LOCAL: Lógica normal contra IA
         // Get the OLD pokemon name BEFORE switching
         String oldPokemonName = playerTeam.getActivePokemon().getPokemon().getName();
 
@@ -1059,7 +1385,8 @@ public class EnhancedBattlePanel extends JPanel {
         for (int i = 0; i < 4; i++) {
             if (i < playerMoves.size()) {
                 Move move = playerMoves.get(i);
-                PokemonUtils.updateAttackButton(attackButtons[i], move);
+                MoveDTO moveDTO = DTOMapper.toDTO(move);
+                PokemonUtils.updateAttackButton(attackButtons[i], moveDTO);
 
                 final int index = i;
                 // Remove old listeners

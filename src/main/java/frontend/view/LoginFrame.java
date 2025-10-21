@@ -21,6 +21,7 @@ import java.util.logging.Logger;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -34,15 +35,16 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
-import backend.application.service.UserService;
-import backend.infrastructure.ServiceLocator;
+import demo.clientserver.AuthClient;
+import frontend.infrastructure.FrontendServiceLocator;
+import frontend.service.IUserService;
 import frontend.util.UIUtils;
 import shared.util.I18n;
 
 public class LoginFrame extends JFrame {
     private static final Logger LOGGER = Logger.getLogger(LoginFrame.class.getName());
 
-    private final UserService userService;
+    private final IUserService userService;
 
     private JTextField userField;
     private JPasswordField passField;
@@ -54,13 +56,20 @@ public class LoginFrame extends JFrame {
     private boolean isRegisterMode = false;
     private Timer shakeTimer;
     private boolean isProcessing = false;
+    
+    // Remote server components
+    private JCheckBox remoteServerCheckbox;
+    private JTextField serverHostField;
+    private JTextField serverPortField;
+    private JLabel serverHostLabel;
+    private JLabel serverPortLabel;
 
     public LoginFrame() {
-        this.userService = ServiceLocator.getInstance().getUserService();
+        this.userService = FrontendServiceLocator.getInstance().getUserService();
 
         setTitle(I18n.get("login.title"));
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(500, 650);
+        setSize(500, 750); // Aumentado para acomodar campos de servidor
         setLocationRelativeTo(null);
         setResizable(false);
 
@@ -247,7 +256,78 @@ public class LoginFrame extends JFrame {
         confirmPassField.setVisible(false);
         panel.add(confirmPassField, gbc);
 
+        // Remote Server Checkbox
+        gbc.gridx = 0;
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        remoteServerCheckbox = new JCheckBox("🌐 Usar Servidor Remoto");
+        remoteServerCheckbox.setFont(new Font("Arial", Font.BOLD, 13));
+        remoteServerCheckbox.setOpaque(false);
+        remoteServerCheckbox.setForeground(Color.DARK_GRAY);
+        remoteServerCheckbox.addActionListener(e -> toggleRemoteServerFields());
+        panel.add(remoteServerCheckbox, gbc);
+
+        // Remote Server Host
+        gbc.gridwidth = 1;
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.weightx = 0;
+        serverHostLabel = UIUtils.createLabel("Servidor:");
+        serverHostLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        serverHostLabel.setVisible(false);
+        panel.add(serverHostLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        serverHostField = new JTextField("localhost");
+        serverHostField.setPreferredSize(new Dimension(250, 36));
+        serverHostField.setMinimumSize(new Dimension(250, 36));
+        serverHostField.setMaximumSize(new Dimension(250, 36));
+        serverHostField.setFont(UIUtils.FIELD_FONT);
+        serverHostField.setToolTipText("IP ou hostname do servidor (ex: 192.168.1.100)");
+        UIUtils.applyRoundedBorder(serverHostField);
+        serverHostField.setVisible(false);
+        panel.add(serverHostField, gbc);
+
+        // Remote Server Port
+        gbc.gridx = 0;
+        gbc.gridy = 5;
+        gbc.weightx = 0;
+        serverPortLabel = UIUtils.createLabel("Porta:");
+        serverPortLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        serverPortLabel.setVisible(false);
+        panel.add(serverPortLabel, gbc);
+
+        gbc.gridx = 1;
+        gbc.weightx = 1.0;
+        serverPortField = new JTextField("5555");
+        serverPortField.setPreferredSize(new Dimension(250, 36));
+        serverPortField.setMinimumSize(new Dimension(250, 36));
+        serverPortField.setMaximumSize(new Dimension(250, 36));
+        serverPortField.setFont(UIUtils.FIELD_FONT);
+        serverPortField.setToolTipText("Porta do servidor (padrão: 5555)");
+        UIUtils.applyRoundedBorder(serverPortField);
+        serverPortField.setVisible(false);
+        panel.add(serverPortField, gbc);
+
         return panel;
+    }
+    
+    private void toggleRemoteServerFields() {
+        boolean visible = remoteServerCheckbox.isSelected();
+        serverHostLabel.setVisible(visible);
+        serverHostField.setVisible(visible);
+        serverPortLabel.setVisible(visible);
+        serverPortField.setVisible(visible);
+        
+        if (visible) {
+            statusLabel.setText("Modo remoto ativado - conectará ao servidor");
+        } else {
+            statusLabel.setText("Modo local ativado - autenticação local");
+        }
+        
+        formPanel.revalidate();
+        formPanel.repaint();
     }
 
     private JPanel createButtonPanel() {
@@ -349,12 +429,12 @@ public class LoginFrame extends JFrame {
             return;
         }
 
-        if (!UserService.validateUsername(username)) {
+        if (!validateUsername(username)) {
             showError(I18n.get("login.error.usernameInvalid"), userField);
             return;
         }
 
-        if (!UserService.validatePassword(password, isRegisterMode)) {
+        if (!validatePassword(password, isRegisterMode)) {
             showError(I18n.get("login.error.passwordInvalid"), passField);
             return;
         }
@@ -377,8 +457,20 @@ public class LoginFrame extends JFrame {
 
     private void authenticate(String username, String password) {
         setProcessing(true);
-        statusLabel.setText(I18n.get("login.status.authenticating"));
-
+        
+        // Check if remote mode is enabled
+        boolean isRemoteMode = remoteServerCheckbox.isSelected();
+        
+        if (isRemoteMode) {
+            statusLabel.setText("Conectando ao servidor remoto...");
+            authenticateRemote(username, password);
+        } else {
+            statusLabel.setText(I18n.get("login.status.authenticating"));
+            authenticateLocal(username, password);
+        }
+    }
+    
+    private void authenticateLocal(String username, String password) {
         SwingWorker<Boolean, Void> worker = new SwingWorker<>() {
             private String errorMessage = null;
 
@@ -420,6 +512,81 @@ public class LoginFrame extends JFrame {
         };
         worker.execute();
     }
+    
+    private void authenticateRemote(String username, String password) {
+        SwingWorker<AuthClient.AuthResult, Void> worker = new SwingWorker<>() {
+            private String connectionError = null;
+
+            @Override
+            protected AuthClient.AuthResult doInBackground() {
+                try {
+                    String host = serverHostField.getText().trim();
+                    String portStr = serverPortField.getText().trim();
+                    
+                    if (host.isEmpty()) {
+                        connectionError = "Servidor não pode estar vazio";
+                        return null;
+                    }
+                    
+                    int port;
+                    try {
+                        port = Integer.parseInt(portStr);
+                        if (port < 1 || port > 65535) {
+                            connectionError = "Porta deve estar entre 1 e 65535";
+                            return null;
+                        }
+                    } catch (NumberFormatException ex) {
+                        connectionError = "Porta inválida: " + portStr;
+                        return null;
+                    }
+                    
+                    AuthClient client = new AuthClient(host, port);
+                    return client.login(username, password);
+                    
+                } catch (Exception ex) {
+                    LOGGER.log(Level.SEVERE, "Erro ao conectar ao servidor remoto", ex);
+                    connectionError = "Erro ao conectar: " + ex.getMessage();
+                    return null;
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    if (connectionError != null) {
+                        showError("Erro de conexão: " + connectionError, serverHostField);
+                        setProcessing(false);
+                        return;
+                    }
+                    
+                    AuthClient.AuthResult result = get();
+                    
+                    if (result == null) {
+                        showError("Erro ao conectar ao servidor remoto", serverHostField);
+                        setProcessing(false);
+                        return;
+                    }
+                    
+                    if (result.success) {
+                        statusLabel.setText("Login remoto bem-sucedido!");
+                        JOptionPane.showMessageDialog(LoginFrame.this,
+                                "Bem-vindo, " + username + "!\nTipo: " + result.userType + " (Remoto)",
+                                "Login Remoto Bem-Sucedido",
+                                JOptionPane.INFORMATION_MESSAGE);
+                        openPokedex(username);
+                    } else {
+                        showError("Login remoto falhou: " + result.error, userField, passField);
+                    }
+                } catch (InterruptedException | java.util.concurrent.ExecutionException ex) {
+                    LOGGER.log(Level.SEVERE, "Erro ao processar login remoto", ex);
+                    showError("Erro ao processar resposta: " + ex.getMessage());
+                } finally {
+                    setProcessing(false);
+                }
+            }
+        };
+        worker.execute();
+    }
 
     private void register(String username, String password, String confirmPassword) {
         setProcessing(true);
@@ -431,7 +598,12 @@ public class LoginFrame extends JFrame {
             @Override
             protected Boolean doInBackground() {
                 try {
-                    userService.register(username, password, confirmPassword, false);
+                    // Validate password match before calling service
+                    if (!password.equals(confirmPassword)) {
+                        errorMessage = I18n.get("login.error.passwordMismatch");
+                        return false;
+                    }
+                    userService.register(username, password, false);
                     return true;
                 } catch (SQLException ex) {
                     LOGGER.log(Level.SEVERE, "Erro ao registrar", ex);
@@ -543,9 +715,9 @@ public class LoginFrame extends JFrame {
         boolean isValid = true;
 
         if (field == userField) {
-            isValid = UserService.validateUsername(text);
+            isValid = validateUsername(text);
         } else if (field == passField) {
-            isValid = UserService.validatePassword(text, isRegisterMode);
+            isValid = validatePassword(text, isRegisterMode);
         } else if (field == confirmPassField) {
             isValid = text.equals(new String(passField.getPassword()));
         }
@@ -605,6 +777,26 @@ public class LoginFrame extends JFrame {
                 new LoginFrame().setVisible(true);
             }
         });
+    }
+
+    /**
+     * Validate username (must be at least 3 characters)
+     */
+    private static boolean validateUsername(String username) {
+        return username != null && !username.trim().isEmpty() && username.trim().length() >= 3;
+    }
+
+    /**
+     * Validate password
+     * @param password Password to validate
+     * @param isNewUser True if registering new user (requires min 6 chars), false for existing user
+     */
+    private static boolean validatePassword(String password, boolean isNewUser) {
+        if (password == null) return false;
+        if (isNewUser) {
+            return !password.trim().isEmpty() && password.trim().length() >= 6;
+        }
+        return password.trim().isEmpty() || password.trim().length() >= 6;
     }
 
     public static void main(String[] args) {

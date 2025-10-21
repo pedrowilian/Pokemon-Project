@@ -33,11 +33,15 @@ public class Main {
             LOGGER.log(Level.SEVERE, "Failed to initialize application services", e);
             System.exit(1);
         }
+        
+        // Pre-load common Pokemon images (async)
+        frontend.util.ImageCache.preloadCommon();
 
         // Add shutdown hook to cleanup resources
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             LOGGER.log(Level.INFO, "Shutting down application...");
             ServiceLocator.getInstance().shutdown();
+            frontend.util.ImageCache.shutdown();
         }));
 
         // Launch GUI

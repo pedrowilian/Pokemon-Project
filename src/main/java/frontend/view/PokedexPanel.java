@@ -20,8 +20,6 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
@@ -46,11 +44,11 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 
-import backend.application.service.PokemonService;
-import backend.application.service.UserService;
-import backend.domain.model.Pokemon;
-import backend.domain.service.IPokemonRepository.AttributeMaxValues;
-import backend.infrastructure.ServiceLocator;
+import backend.application.dto.PokemonDTO;
+import frontend.infrastructure.FrontendServiceLocator;
+import frontend.service.IPokemonService;
+import frontend.service.IPokemonService.AttributeMaxValues;
+import frontend.service.IUserService;
 import frontend.util.UIUtils;
 import shared.util.I18n;
 import shared.util.ReadTextFile;
@@ -62,8 +60,8 @@ public class PokedexPanel extends JPanel {
     private final JFrame parentFrame;
     private final String username;
     private final boolean isAdmin;
-    private final PokemonService pokemonService;
-    private final UserService userService;
+    private final IPokemonService pokemonService;
+    private final IUserService userService;
     private final AttributeMaxValues maxAttributeValues;
 
     private JTable table;
@@ -77,8 +75,8 @@ public class PokedexPanel extends JPanel {
     public PokedexPanel(JFrame parentFrame, String username) {
         this.parentFrame = parentFrame;
         this.username = username;
-        this.pokemonService = ServiceLocator.getInstance().getPokemonService();
-        this.userService = ServiceLocator.getInstance().getUserService();
+        this.pokemonService = FrontendServiceLocator.getInstance().getPokemonService();
+        this.userService = FrontendServiceLocator.getInstance().getUserService();
         this.isAdmin = checkAdmin();
         this.maxAttributeValues = getMaxAttributeValues();
 
@@ -245,12 +243,12 @@ public class PokedexPanel extends JPanel {
 
     private void addSliders(JPanel panel, GridBagConstraints gbc) {
         SliderConfig[] configs = {
-            new SliderConfig("HP", maxAttributeValues.maxHP()),
-            new SliderConfig("Attack", maxAttributeValues.maxAttack()),
-            new SliderConfig("Defense", maxAttributeValues.maxDefense()),
-            new SliderConfig("Sp. Atk", maxAttributeValues.maxSpAtk()),
-            new SliderConfig("Sp. Def", maxAttributeValues.maxSpDef()),
-            new SliderConfig("Speed", maxAttributeValues.maxSpeed())
+            new SliderConfig("HP", maxAttributeValues.maxHP),
+            new SliderConfig("Attack", maxAttributeValues.maxAttack),
+            new SliderConfig("Defense", maxAttributeValues.maxDefense),
+            new SliderConfig("Sp. Atk", maxAttributeValues.maxSpAtk),
+            new SliderConfig("Sp. Def", maxAttributeValues.maxSpDef),
+            new SliderConfig("Speed", maxAttributeValues.maxSpeed)
         };
 
         int y = 2;
@@ -549,12 +547,12 @@ public class PokedexPanel extends JPanel {
         spAtkSlider.setValue(0);
         spDefSlider.setValue(0);
         speedSlider.setValue(0);
-        hpLabel.setText("HP: 0-" + maxAttributeValues.maxHP());
-        attackLabel.setText("Attack: 0-" + maxAttributeValues.maxAttack());
-        defenseLabel.setText("Defense: 0-" + maxAttributeValues.maxDefense());
-        spAtkLabel.setText("Sp. Atk: 0-" + maxAttributeValues.maxSpAtk());
-        spDefLabel.setText("Sp. Def: 0-" + maxAttributeValues.maxSpDef());
-        speedLabel.setText("Speed: 0-" + maxAttributeValues.maxSpeed());
+        hpLabel.setText("HP: 0-" + maxAttributeValues.maxHP);
+        attackLabel.setText("Attack: 0-" + maxAttributeValues.maxAttack);
+        defenseLabel.setText("Defense: 0-" + maxAttributeValues.maxDefense);
+        spAtkLabel.setText("Sp. Atk: 0-" + maxAttributeValues.maxSpAtk);
+        spDefLabel.setText("Sp. Def: 0-" + maxAttributeValues.maxSpDef);
+        speedLabel.setText("Speed: 0-" + maxAttributeValues.maxSpeed);
         applyFilters();
         statusBar.setText(I18n.get("pokedex.status.cleared"));
     }
@@ -567,29 +565,26 @@ public class PokedexPanel extends JPanel {
             // Convert "All" to null for the service call (type already in English from applyFilters)
             String selectedTypeForQuery = (type != null && !type.equalsIgnoreCase("All")) ? type : null;
 
-            // Convert 0 values to null (no filter) for the service call
-            Integer minHpFilter = minHp > 0 ? minHp : null;
-            Integer minAttackFilter = minAttack > 0 ? minAttack : null;
-            Integer minDefenseFilter = minDefense > 0 ? minDefense : null;
-            Integer minSpAtkFilter = minSpAtk > 0 ? minSpAtk : null;
-            Integer minSpDefFilter = minSpDef > 0 ? minSpDef : null;
-            Integer minSpeedFilter = minSpeed > 0 ? minSpeed : null;
-
-            // Call the service with filters
-            List<Pokemon> pokemons = pokemonService.findWithFilters(
-                id,
-                selectedTypeForQuery,
-                minHpFilter, null,      // HP min/max
-                minAttackFilter, null,  // Attack min/max
-                minDefenseFilter, null, // Defense min/max
-                minSpAtkFilter, null,   // SpAtk min/max
-                minSpDefFilter, null,   // SpDef min/max
-                minSpeedFilter, null    // Speed min/max
+            // searchPokemon expects String nameFilter (can use ID as filter), String typeFilter, and 6 int values
+            // If id is provided, we could use it as name filter, but since the interface uses nameFilter,
+            // we'll call searchPokemon with empty string for name and let type/stats filter
+            String nameFilter = (id != null) ? String.valueOf(id) : "";
+            
+            // Call the service with filters (searchPokemon expects primitive ints, not nulls)
+            List<PokemonDTO> pokemons = pokemonService.searchPokemon(
+                nameFilter,
+                selectedTypeForQuery != null ? selectedTypeForQuery : "",
+                minHp,      // HP min
+                minAttack,  // Attack min
+                minDefense, // Defense min
+                minSpAtk,   // SpAtk min
+                minSpDef,   // SpDef min
+                minSpeed    // Speed min
             );
 
             // Populate the table with results
             boolean found = false;
-            for (Pokemon pokemon : pokemons) {
+            for (PokemonDTO pokemon : pokemons) {
                 found = true;
                 Object[] row = {
                     carregarIcon(pokemon.getId()),
@@ -625,21 +620,8 @@ public class PokedexPanel extends JPanel {
 
     private ImageIcon carregarIcon(int id) {
         String file = IMAGE_DIR + id + ".png";
-        File f = new File(file);
-        if (!f.exists()) {
-            BufferedImage placeholder = new BufferedImage(64, 64, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g2d = placeholder.createGraphics();
-            g2d.setColor(Color.GRAY);
-            g2d.fillRect(0, 0, 64, 64);
-            g2d.setColor(Color.WHITE);
-            g2d.setFont(UIUtils.LABEL_FONT);
-            g2d.drawString(I18n.get("pokedex.image.noImage"), 10, 32);
-            g2d.dispose();
-            return new ImageIcon(placeholder);
-        }
-        ImageIcon ic = new ImageIcon(file);
-        Image img = ic.getImage().getScaledInstance(64, 64, Image.SCALE_SMOOTH);
-        return new ImageIcon(img);
+        // Use ImageCache for better performance
+        return frontend.util.ImageCache.loadSync(file);
     }
 
     private void closeConnections() {

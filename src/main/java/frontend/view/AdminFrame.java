@@ -43,16 +43,16 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
-import backend.application.service.UserService;
-import backend.domain.model.User;
-import backend.infrastructure.ServiceLocator;
+import backend.application.dto.UserDTO;
+import frontend.infrastructure.FrontendServiceLocator;
+import frontend.service.IUserService;
 import frontend.util.UIUtils;
 import shared.util.I18n;
 
 public class AdminFrame extends JFrame {
     private static final Logger LOGGER = Logger.getLogger(AdminFrame.class.getName());
     private final String username;
-    private final UserService userService;
+    private final IUserService userService;
     private JTable userTable;
     private DefaultTableModel tableModel;
     private TableRowSorter<DefaultTableModel> sorter;
@@ -63,7 +63,7 @@ public class AdminFrame extends JFrame {
 
     public AdminFrame(String username) {
         this.username = username;
-        this.userService = ServiceLocator.getInstance().getUserService();
+        this.userService = FrontendServiceLocator.getInstance().getUserService();
 
         setTitle(I18n.get("admin.title", username));
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -193,7 +193,7 @@ public class AdminFrame extends JFrame {
         buttonPanel.add(addButton);
 
         editButton = UIUtils.createStyledButton(I18n.get("admin.button.edit"), e -> {
-            User user = getSelectedUser();
+            UserDTO user = getSelectedUser();
             if (user == null) {
                 showError(I18n.get("admin.error.selectUser"));
                 return;
@@ -252,7 +252,7 @@ public class AdminFrame extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2 && !isProcessing) {
-                    User user = getSelectedUser();
+                    UserDTO user = getSelectedUser();
                     if (user != null) {
                         openUserDialog(user);
                     }
@@ -325,7 +325,7 @@ public class AdminFrame extends JFrame {
         return bottomPanel;
     }
 
-    private void openUserDialog(User user) {
+    private void openUserDialog(UserDTO user) {
         if (isProcessing) return;
 
         boolean isEditing = user != null;
@@ -428,7 +428,7 @@ public class AdminFrame extends JFrame {
         dialog.setVisible(true);
     }
 
-    private void saveUser(JDialog dialog, User user, JTextField usernameField,
+    private void saveUser(JDialog dialog, UserDTO user, JTextField usernameField,
             JPasswordField passwordField, JCheckBox adminCheckBox) {
         if (isProcessing) return;
 
@@ -443,7 +443,7 @@ public class AdminFrame extends JFrame {
             return;
         }
 
-        if (!UserService.validateUsername(newUsername)) {
+        if (!validateUsername(newUsername)) {
             showError(I18n.get("admin.error.usernameInvalid"), dialog);
             usernameField.requestFocus();
             return;
@@ -455,7 +455,7 @@ public class AdminFrame extends JFrame {
             return;
         }
 
-        if (!password.isEmpty() && !UserService.validatePassword(password, user == null)) {
+        if (!password.isEmpty() && !validatePassword(password, user == null)) {
             showError(I18n.get("admin.error.passwordInvalid"), dialog);
             passwordField.requestFocus();
             return;
@@ -471,9 +471,15 @@ public class AdminFrame extends JFrame {
             protected Boolean doInBackground() {
                 try {
                     if (user == null) {
-                        userService.addUser(newUsername, password, isAdmin);
+                        // Create new user
+                        userService.register(newUsername, password, isAdmin);
                     } else {
-                        userService.editUser(user.getUsername(), newUsername, password, isAdmin);
+                        // Update existing user - only update password if provided
+                        if (!password.isEmpty()) {
+                            userService.updateUser(user.getUsername(), password, isAdmin);
+                        } else {
+                            userService.updateUser(user.getUsername(), null, isAdmin);
+                        }
                     }
                     return true;
                 } catch (SQLException ex) {
@@ -511,23 +517,27 @@ public class AdminFrame extends JFrame {
         statusLabel.setText(I18n.get("admin.status.loading"));
         tableModel.setRowCount(0);
 
-        SwingWorker<List<User>, Void> worker = new SwingWorker<>() {
+        SwingWorker<List<UserDTO>, Void> worker = new SwingWorker<>() {
             @Override
-            protected List<User> doInBackground() throws SQLException {
-                return userService.getUsers(searchTerm);
+            protected List<UserDTO> doInBackground() throws SQLException {
+                return userService.getAllUsers();
             }
 
             @Override
             protected void done() {
                 try {
-                    List<User> users = get();
-                    for (User user : users) {
-                        tableModel.addRow(new Object[]{
-                            user.getUsername(),
-                            user.isAdmin() ? I18n.get("admin.table.type.admin") : I18n.get("admin.table.type.user"),
-                            user.getTimeSinceLastLogin(),
-                            user.getAccountCreatedFormatted()
-                        });
+                    List<UserDTO> users = get();
+                    // Apply search filter if provided
+                    for (UserDTO user : users) {
+                        if (searchTerm == null || searchTerm.isEmpty() || 
+                            user.getUsername().toLowerCase().contains(searchTerm.toLowerCase())) {
+                            tableModel.addRow(new Object[]{
+                                user.getUsername(),
+                                user.isAdmin() ? I18n.get("admin.table.type.admin") : I18n.get("admin.table.type.user"),
+                                user.getLastLogin(),
+                                user.getAccountCreated()
+                            });
+                        }
                     }
 
                     userCountLabel.setText(I18n.get("admin.count", users.size()));
@@ -547,7 +557,7 @@ public class AdminFrame extends JFrame {
     private void deleteUser() {
         if (isProcessing) return;
 
-        User user = getSelectedUser();
+        UserDTO user = getSelectedUser();
         if (user == null) {
             showError(I18n.get("admin.error.selectUserDelete"));
             return;
@@ -628,7 +638,7 @@ public class AdminFrame extends JFrame {
         }
     }
 
-    private User getSelectedUser() {
+    private UserDTO getSelectedUser() {
         int row = userTable.getSelectedRow();
         if (row == -1) return null;
 
@@ -636,8 +646,10 @@ public class AdminFrame extends JFrame {
         String userUsername = (String) tableModel.getValueAt(modelRow, 0);
         String typeCell = (String) tableModel.getValueAt(modelRow, 1);
         boolean isAdmin = typeCell.contains("Admin");
+        String lastLogin = (String) tableModel.getValueAt(modelRow, 2);
+        String accountCreated = (String) tableModel.getValueAt(modelRow, 3);
 
-        return new User(userUsername, "", isAdmin);
+        return new UserDTO(userUsername, isAdmin, lastLogin, accountCreated);
     }
 
     private void setProcessing(boolean processing) {
@@ -688,5 +700,25 @@ public class AdminFrame extends JFrame {
         Timer timer = new Timer(3000, e -> statusLabel.setForeground(new Color(80, 80, 80)));
         timer.setRepeats(false);
         timer.start();
+    }
+
+    /**
+     * Validate username (must be at least 3 characters)
+     */
+    private static boolean validateUsername(String username) {
+        return username != null && !username.trim().isEmpty() && username.trim().length() >= 3;
+    }
+
+    /**
+     * Validate password
+     * @param password Password to validate
+     * @param isNewUser True if registering new user (requires min 6 chars), false for existing user
+     */
+    private static boolean validatePassword(String password, boolean isNewUser) {
+        if (password == null) return false;
+        if (isNewUser) {
+            return !password.trim().isEmpty() && password.trim().length() >= 6;
+        }
+        return password.trim().isEmpty() || password.trim().length() >= 6;
     }
 }
