@@ -260,7 +260,7 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 3;
         gbc.gridwidth = 2;
-        remoteServerCheckbox = new JCheckBox("🌐 Usar Servidor Remoto");
+        remoteServerCheckbox = new JCheckBox(I18n.get("login.remoteServer.checkbox"));
         remoteServerCheckbox.setFont(new Font("Arial", Font.BOLD, 13));
         remoteServerCheckbox.setOpaque(false);
         remoteServerCheckbox.setForeground(Color.DARK_GRAY);
@@ -272,7 +272,7 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 4;
         gbc.weightx = 0;
-        serverHostLabel = UIUtils.createLabel("Servidor:");
+        serverHostLabel = UIUtils.createLabel(I18n.get("login.remoteServer.host"));
         serverHostLabel.setFont(new Font("Arial", Font.BOLD, 13));
         serverHostLabel.setVisible(false);
         panel.add(serverHostLabel, gbc);
@@ -284,7 +284,7 @@ public class LoginFrame extends JFrame {
         serverHostField.setMinimumSize(new Dimension(250, 36));
         serverHostField.setMaximumSize(new Dimension(250, 36));
         serverHostField.setFont(UIUtils.FIELD_FONT);
-        serverHostField.setToolTipText("IP ou hostname do servidor (ex: 192.168.1.100)");
+        serverHostField.setToolTipText(I18n.get("login.remoteServer.host.tooltip"));
         UIUtils.applyRoundedBorder(serverHostField);
         serverHostField.setVisible(false);
         panel.add(serverHostField, gbc);
@@ -293,7 +293,7 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 5;
         gbc.weightx = 0;
-        serverPortLabel = UIUtils.createLabel("Porta:");
+        serverPortLabel = UIUtils.createLabel(I18n.get("login.remoteServer.port"));
         serverPortLabel.setFont(new Font("Arial", Font.BOLD, 13));
         serverPortLabel.setVisible(false);
         panel.add(serverPortLabel, gbc);
@@ -305,7 +305,7 @@ public class LoginFrame extends JFrame {
         serverPortField.setMinimumSize(new Dimension(250, 36));
         serverPortField.setMaximumSize(new Dimension(250, 36));
         serverPortField.setFont(UIUtils.FIELD_FONT);
-        serverPortField.setToolTipText("Porta do servidor (padrão: 5555)");
+        serverPortField.setToolTipText(I18n.get("login.remoteServer.port.tooltip"));
         UIUtils.applyRoundedBorder(serverPortField);
         serverPortField.setVisible(false);
         panel.add(serverPortField, gbc);
@@ -321,9 +321,9 @@ public class LoginFrame extends JFrame {
         serverPortField.setVisible(visible);
         
         if (visible) {
-            statusLabel.setText("Modo remoto ativado - conectará ao servidor");
+            statusLabel.setText(I18n.get("login.remoteServer.enabled"));
         } else {
-            statusLabel.setText("Modo local ativado - autenticação local");
+            statusLabel.setText(I18n.get("login.remoteServer.disabled"));
         }
         
         formPanel.revalidate();
@@ -462,7 +462,7 @@ public class LoginFrame extends JFrame {
         boolean isRemoteMode = remoteServerCheckbox.isSelected();
         
         if (isRemoteMode) {
-            statusLabel.setText("Conectando ao servidor remoto...");
+            statusLabel.setText(I18n.get("login.remoteServer.connecting"));
             authenticateRemote(username, password);
         } else {
             statusLabel.setText(I18n.get("login.status.authenticating"));
@@ -524,7 +524,7 @@ public class LoginFrame extends JFrame {
                     String portStr = serverPortField.getText().trim();
                     
                     if (host.isEmpty()) {
-                        connectionError = "Servidor não pode estar vazio";
+                        connectionError = I18n.get("login.remoteServer.error.emptyHost");
                         return null;
                     }
                     
@@ -532,11 +532,11 @@ public class LoginFrame extends JFrame {
                     try {
                         port = Integer.parseInt(portStr);
                         if (port < 1 || port > 65535) {
-                            connectionError = "Porta deve estar entre 1 e 65535";
+                            connectionError = I18n.get("login.remoteServer.error.invalidPortRange");
                             return null;
                         }
                     } catch (NumberFormatException ex) {
-                        connectionError = "Porta inválida: " + portStr;
+                        connectionError = I18n.get("login.remoteServer.error.invalidPort", portStr);
                         return null;
                     }
                     
@@ -545,7 +545,7 @@ public class LoginFrame extends JFrame {
                     
                 } catch (Exception ex) {
                     LOGGER.log(Level.SEVERE, "Erro ao conectar ao servidor remoto", ex);
-                    connectionError = "Erro ao conectar: " + ex.getMessage();
+                    connectionError = I18n.get("login.remoteServer.error.connection", ex.getMessage());
                     return null;
                 }
             }
@@ -554,7 +554,7 @@ public class LoginFrame extends JFrame {
             protected void done() {
                 try {
                     if (connectionError != null) {
-                        showError("Erro de conexão: " + connectionError, serverHostField);
+                        showError(I18n.get("login.remoteServer.error.connectionFailed", connectionError), serverHostField);
                         setProcessing(false);
                         return;
                     }
@@ -562,24 +562,24 @@ public class LoginFrame extends JFrame {
                     AuthClient.AuthResult result = get();
                     
                     if (result == null) {
-                        showError("Erro ao conectar ao servidor remoto", serverHostField);
+                        showError(I18n.get("login.remoteServer.error.connectionFailed", ""), serverHostField);
                         setProcessing(false);
                         return;
                     }
                     
                     if (result.success) {
-                        statusLabel.setText("Login remoto bem-sucedido!");
+                        statusLabel.setText(I18n.get("login.remoteServer.success"));
                         JOptionPane.showMessageDialog(LoginFrame.this,
-                                "Bem-vindo, " + username + "!\nTipo: " + result.userType + " (Remoto)",
-                                "Login Remoto Bem-Sucedido",
+                                I18n.get("login.remoteServer.success.message", username, result.userType),
+                                I18n.get("login.remoteServer.success.title"),
                                 JOptionPane.INFORMATION_MESSAGE);
                         openPokedex(username);
                     } else {
-                        showError("Login remoto falhou: " + result.error, userField, passField);
+                        showError(I18n.get("login.remoteServer.error.failed", result.error), userField, passField);
                     }
                 } catch (InterruptedException | java.util.concurrent.ExecutionException ex) {
                     LOGGER.log(Level.SEVERE, "Erro ao processar login remoto", ex);
-                    showError("Erro ao processar resposta: " + ex.getMessage());
+                    showError(I18n.get("login.remoteServer.error.processingResponse", ex.getMessage()));
                 } finally {
                     setProcessing(false);
                 }
@@ -658,7 +658,7 @@ public class LoginFrame extends JFrame {
         statusLabel.setText(message);
         statusLabel.setForeground(UIUtils.ERROR_COLOR);
 
-        JOptionPane.showMessageDialog(this, message, "Erro", JOptionPane.ERROR_MESSAGE);
+        JOptionPane.showMessageDialog(this, message, I18n.get("common.error"), JOptionPane.ERROR_MESSAGE);
 
         // Reset all borders first
         userField.setBorder(UIUtils.createCompoundRoundedBorder(Color.GRAY));
