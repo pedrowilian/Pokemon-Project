@@ -1,16 +1,19 @@
 package backend.infrastructure;
 
-import backend.application.service.*;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import backend.application.service.BattleService;
+import backend.application.service.PokemonService;
+import backend.application.service.TeamService;
+import backend.application.service.UserService;
 import backend.domain.service.IPokemonRepository;
 import backend.domain.service.IUserRepository;
 import backend.infrastructure.database.PokemonRepository;
 import backend.infrastructure.database.UserRepository;
 import backend.infrastructure.persistence.ConnectionManager;
-
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Service Locator pattern for dependency injection
@@ -97,24 +100,6 @@ public class ServiceLocator {
 
     public IPokemonRepository getPokemonRepository() {
         return pokemonRepository;
-    }
-
-    /**
-     * Get database connections for GUI classes that still need them
-     * @deprecated Use services instead
-     */
-    @Deprecated
-    public Connection getUserConnection() throws SQLException {
-        return connectionManager.getConnection(USER_DB);
-    }
-
-    /**
-     * Get database connections for GUI classes that still need them
-     * @deprecated Use services instead
-     */
-    @Deprecated
-    public Connection getPokedexConnection() throws SQLException {
-        return connectionManager.getConnection(POKEDEX_DB);
     }
 
     /**

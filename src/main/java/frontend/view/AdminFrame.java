@@ -49,6 +49,8 @@ import backend.infrastructure.ServiceLocator;
 import frontend.util.UIUtils;
 import shared.util.I18n;
 
+// Admin Frame
+
 public class AdminFrame extends JFrame {
     private static final Logger LOGGER = Logger.getLogger(AdminFrame.class.getName());
     private final String username;

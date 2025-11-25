@@ -1,6 +1,7 @@
 package backend.application.service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ import shared.util.I18n;
 
 /**
  * Battle service - handles all battle logic
- * Extracted from EnhancedBattlePanel (1,762 lines -> clean service)
+ * Extracted from SingleplayerBattlePanel (1,762 lines -> clean service)
  */
 public class BattleService {
     private static final Logger LOGGER = Logger.getLogger(BattleService.class.getName());
@@ -224,29 +225,66 @@ public class BattleService {
      * JSON format is an object with move names as keys
      */
     private static void loadMovesFromJSON() {
-        try {
-            String content = new String(Files.readAllBytes(Paths.get("movesData.json")));
-            movesStatsData = new JSONObject(content);
+        // Try classpath resource first (works when packaged)
+        try (InputStream is = BattleService.class.getResourceAsStream("/movesData.json")) {
+            if (is != null) {
+                String content = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                movesStatsData = new JSONObject(content);
 
-            // Iterate through all move names in the JSON object
-            for (String moveName : movesStatsData.keySet()) {
-                JSONObject moveData = movesStatsData.getJSONObject(moveName);
+                // Iterate through all move names in the JSON object
+                for (String moveName : movesStatsData.keySet()) {
+                    JSONObject moveData = movesStatsData.getJSONObject(moveName);
 
-                String type = moveData.getString("type");
-                int power = moveData.optInt("power", 50);
-                int accuracy = moveData.optInt("accuracy", 100);
+                    String type = moveData.getString("type");
+                    int power = moveData.optInt("power", 50);
+                    int accuracy = moveData.optInt("accuracy", 100);
 
-                allMoves.add(new Move(moveName, type, power, accuracy));
+                    allMoves.add(new Move(moveName, type, power, accuracy));
+                }
+
+                LOGGER.log(Level.INFO, "Loaded {0} moves from classpath resource", new Object[]{allMoves.size()});
+                return;
             }
-
-            LOGGER.log(Level.INFO, "Loaded {0} moves from movesData.json", allMoves.size());
         } catch (IOException e) {
-            LOGGER.log(Level.SEVERE, "Failed to load moves from JSON", e);
-            addDefaultMoves();
+            LOGGER.log(Level.WARNING, "Failed to load from classpath: {0}", e.getMessage());
         } catch (JSONException e) {
-            LOGGER.log(Level.SEVERE, "Error parsing moves JSON", e);
-            addDefaultMoves();
+            LOGGER.log(Level.WARNING, "Failed to parse movesData.json: {0}", e.getMessage());
         }
+        
+        // Try file system paths (development mode)
+        String[] possiblePaths = {
+            "movesData.json",
+            "./movesData.json",
+            "../movesData.json",
+            "../../movesData.json"
+        };
+        
+        for (String path : possiblePaths) {
+            try {
+                String content = new String(Files.readAllBytes(Paths.get(path)));
+                movesStatsData = new JSONObject(content);
+
+                // Iterate through all move names in the JSON object
+                for (String moveName : movesStatsData.keySet()) {
+                    JSONObject moveData = movesStatsData.getJSONObject(moveName);
+
+                    String type = moveData.getString("type");
+                    int power = moveData.optInt("power", 50);
+                    int accuracy = moveData.optInt("accuracy", 100);
+
+                    allMoves.add(new Move(moveName, type, power, accuracy));
+                }
+
+                LOGGER.log(Level.INFO, "Loaded {0} moves from {1}", new Object[]{allMoves.size(), path});
+                return;
+            } catch (IOException | JSONException e) {
+                // Try next path
+            }
+        }
+        
+        // FAIL FAST - don't silently fall back to defaults in production
+        LOGGER.log(Level.SEVERE, "CRITICAL: Failed to load movesData.json from classpath or filesystem. Multiplayer battles will be broken!");
+        addDefaultMoves();
     }
 
     /**
@@ -254,15 +292,40 @@ public class BattleService {
      * JSON format: { "PokemonName": ["Move1", "Move2", "Move3", "Move4"] }
      */
     private static void loadPokemonMovesFromJSON() {
-        try {
-            String content = new String(Files.readAllBytes(Paths.get("movesPokemon.json")));
-            pokemonMovesData = new JSONObject(content);
-            LOGGER.log(Level.INFO, "Loaded moves for {0} Pokemon from movesPokemon.json", pokemonMovesData.length());
+        // Try classpath resource first (works when packaged)
+        try (InputStream is = BattleService.class.getResourceAsStream("/movesPokemon.json")) {
+            if (is != null) {
+                String content = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                pokemonMovesData = new JSONObject(content);
+                LOGGER.log(Level.INFO, "Loaded moves for {0} Pokemon from classpath resource", new Object[]{pokemonMovesData.length()});
+                return;
+            }
         } catch (IOException e) {
-            LOGGER.log(Level.WARNING, "Failed to load movesPokemon.json, will use type-based moves", e);
+            LOGGER.log(Level.WARNING, "Failed to load from classpath: {0}", e.getMessage());
         } catch (JSONException e) {
-            LOGGER.log(Level.WARNING, "Error parsing movesPokemon.json, will use type-based moves", e);
+            LOGGER.log(Level.WARNING, "Failed to parse movesPokemon.json: {0}", e.getMessage());
         }
+        
+        // Try file system paths (development mode)
+        String[] possiblePaths = {
+            "movesPokemon.json",
+            "./movesPokemon.json",
+            "../movesPokemon.json",
+            "../../movesPokemon.json"
+        };
+        
+        for (String path : possiblePaths) {
+            try {
+                String content = new String(Files.readAllBytes(Paths.get(path)));
+                pokemonMovesData = new JSONObject(content);
+                LOGGER.log(Level.INFO, "Loaded moves for {0} Pokemon from {1}", new Object[]{pokemonMovesData.length(), path});
+                return;
+            } catch (IOException | JSONException e) {
+                // Try next path
+            }
+        }
+        
+        LOGGER.log(Level.SEVERE, "CRITICAL: Failed to load movesPokemon.json from classpath or filesystem. Will use type-based moves as fallback.");
     }
 
     private static void addDefaultMoves() {
@@ -271,6 +334,163 @@ public class BattleService {
         allMoves.add(new Move("Ember", "Fire", 40, 100));
         allMoves.add(new Move("Water Gun", "Water", 40, 100));
         allMoves.add(new Move("Vine Whip", "Grass", 45, 100));
+    }
+
+    // ========== MULTIPLAYER SUPPORT METHODS ==========
+
+    /**
+     * Create a Team from a list of Pokemon
+     */
+    public Team createTeam(List<Pokemon> pokemonList, String trainerName) {
+        return new Team(trainerName, pokemonList);
+    }
+
+    /**
+     * Get battle state as DTO for network transfer
+     */
+    public backend.application.dto.BattleStateDTO getBattleStateDTO(BattleState battle) {
+        backend.application.dto.BattleStateDTO dto = new backend.application.dto.BattleStateDTO();
+        
+        // Convert teams to DTOs
+        dto.setPlayerTeam(convertTeamToDTO(battle.getPlayerTeam()));
+        dto.setEnemyTeam(convertTeamToDTO(battle.getEnemyTeam()));
+        
+        // Set indices
+        dto.setPlayerActivePokemonIndex(battle.getPlayerTeam().getActivePokemonIndex());
+        dto.setEnemyActivePokemonIndex(battle.getEnemyTeam().getActivePokemonIndex());
+        
+        // Set turn and phase
+        dto.setCurrentTurn(battle.getCurrentTurn().toString());
+        dto.setPhase(battle.getPhase().toString());
+        dto.setLastActionMessage(battle.getLastActionMessage());
+        
+        // Set battle end status
+        dto.setBattleEnded(battle.isBattleEnded());
+        if (battle.getWinner() != null) {
+            dto.setWinner(battle.getWinner().getTrainerName());
+        }
+        
+        return dto;
+    }
+
+    /**
+     * Convert Team to PokemonDTO list
+     */
+    private List<backend.application.dto.PokemonDTO> convertTeamToDTO(Team team) {
+        List<backend.application.dto.PokemonDTO> dtoList = new ArrayList<>();
+        for (PokemonBattleStats stats : team.getAllPokemon()) {
+            dtoList.add(convertPokemonToDTO(stats));
+        }
+        return dtoList;
+    }
+
+    /**
+     * Convert PokemonBattleStats to DTO
+     */
+    private backend.application.dto.PokemonDTO convertPokemonToDTO(PokemonBattleStats stats) {
+        Pokemon p = stats.getPokemon();
+        backend.application.dto.PokemonDTO dto = new backend.application.dto.PokemonDTO();
+        
+        dto.setId(p.getId());
+        dto.setName(p.getName());
+        dto.setType1(p.getType1());
+        dto.setType2(p.getType2());
+        dto.setHp(p.getHp());
+        dto.setAttack(p.getAttack());
+        dto.setDefense(p.getDefense());
+        dto.setSpAtk(p.getSpAtk());
+        dto.setSpDef(p.getSpDef());
+        dto.setSpeed(p.getSpeed());
+        
+        // Battle stats
+        dto.setCurrentHp(stats.getCurrentHp());
+        dto.setMaxHp(stats.getMaxHp());
+        dto.setFainted(stats.isFainted());
+        
+        // Generate and convert moves for this Pokemon
+        List<Move> moves = generateMovesForPokemon(p);
+        List<backend.application.dto.MoveDTO> moveDTOs = new ArrayList<>();
+        for (Move move : moves) {
+            moveDTOs.add(new backend.application.dto.MoveDTO(
+                move.getName(), 
+                move.getType(), 
+                move.getPower(), 
+                move.getAccuracy()
+            ));
+        }
+        dto.setAvailableMoves(moveDTOs);
+        
+        LOGGER.log(Level.INFO, "Generated {0} moves for {1}: {2}", 
+            new Object[]{moveDTOs.size(), p.getName(), 
+                moveDTOs.stream().map(m -> m.getName()).reduce((a,b) -> a + ", " + b).orElse("none")});
+        
+        return dto;
+    }
+
+    /**
+     * Execute a player move by index
+     */
+    public String executePlayerMove(BattleState battle, int moveIndex) {
+        PokemonBattleStats attacker = battle.getActiveTeam().getActivePokemon();
+        List<Move> moves = generateMovesForPokemon(attacker.getPokemon());
+        
+        if (moveIndex < 0 || moveIndex >= moves.size()) {
+            throw new IllegalArgumentException("Invalid move index: " + moveIndex);
+        }
+        
+        Move move = moves.get(moveIndex);
+        BattleResult result = executeMove(battle, move);
+        
+        battle.setLastActionMessage(result.getMessage());
+        
+        // Check if defender fainted
+        if (battle.getOpponentTeam().getActivePokemon().isFainted()) {
+            String faintMessage = I18n.get("battle.backend.fainted", 
+                battle.getOpponentTeam().getActivePokemon().getPokemon().getName());
+            battle.setLastActionMessage(result.getMessage() + " " + faintMessage);
+        }
+        
+        // Check battle end
+        checkBattleEnd(battle);
+        
+        // Switch turn if battle not ended
+        if (!battle.isBattleEnded()) {
+            battle.switchTurn();
+        }
+        
+        return battle.getLastActionMessage();
+    }
+
+    /**
+     * Switch Pokemon by index (for multiplayer)
+     */
+    public String switchPokemon(BattleState battle, int pokemonIndex) {
+        Team activeTeam = battle.getActiveTeam();
+        
+        if (pokemonIndex < 0 || pokemonIndex >= activeTeam.getSize()) {
+            throw new IllegalArgumentException("Invalid Pokemon index: " + pokemonIndex);
+        }
+        
+        PokemonBattleStats newPokemon = activeTeam.getPokemon(pokemonIndex);
+        if (newPokemon.isFainted()) {
+            throw new IllegalArgumentException("Cannot switch to fainted Pokemon");
+        }
+        
+        activeTeam.switchPokemon(pokemonIndex);
+        String message = activeTeam.getTrainerName() + " switched to " + newPokemon.getPokemon().getName() + "!";
+        battle.setLastActionMessage(message);
+        
+        // Switch turn
+        battle.switchTurn();
+        
+        return message;
+    }
+
+    /**
+     * Get battle state (returns the domain model directly)
+     */
+    public BattleState getBattleState(BattleState battle) {
+        return battle;
     }
 
     /**

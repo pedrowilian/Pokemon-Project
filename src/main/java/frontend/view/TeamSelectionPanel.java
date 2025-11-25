@@ -38,8 +38,10 @@ import backend.application.service.PokemonService;
 import backend.application.service.TeamService;
 import backend.domain.model.Pokemon;
 import backend.infrastructure.ServiceLocator;
-import shared.util.I18n;
 import frontend.util.UIUtils;
+import shared.util.I18n;
+
+// Team Selection Panel
 
 public class TeamSelectionPanel extends JPanel {
     private static final Logger LOGGER = Logger.getLogger(TeamSelectionPanel.class.getName());
@@ -405,39 +407,18 @@ public class TeamSelectionPanel extends JPanel {
         if (selectedTeam.size() != 5) {
             JOptionPane.showMessageDialog(this,
                 I18n.get("team.error.invalidTeam"),
-                I18n.get("team.error.invalidTeamTitle"), JOptionPane.WARNING_MESSAGE);
+                I18n.get("team.error.invalidTeamTitle"), 
+                JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        List<Pokemon> enemyTeam = generateEnemyTeam();
-
+        // CHANGED: Instead of starting battle directly, show mode selection
         parentFrame.getContentPane().removeAll();
-        parentFrame.setContentPane(new EnhancedBattlePanel(
-            selectedTeam, enemyTeam, username, parentFrame
+        parentFrame.setContentPane(new BattleModeSelectionPanel(
+            parentFrame, username, selectedTeam
         ));
         parentFrame.revalidate();
         parentFrame.repaint();
-    }
-
-    @SuppressWarnings("UseSpecificCatch")
-    private List<Pokemon> generateEnemyTeam() {
-        try {
-            // Generate random team using TeamService
-            var enemyTeam = teamService.generateRandomTeam("Enemy");
-
-            // Extract Pokemon from PokemonBattleStats
-            List<Pokemon> pokemonList = new ArrayList<>();
-            for (var battleStats : enemyTeam.getAllPokemon()) {
-                pokemonList.add(battleStats.getPokemon());
-            }
-
-            return pokemonList;
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error generating enemy team", e);
-            JOptionPane.showMessageDialog(this, I18n.get("team.error.generateEnemy", e.getMessage()),
-                I18n.get("common.error"), JOptionPane.ERROR_MESSAGE);
-            return new ArrayList<>();
-        }
     }
 
     private void returnToPokedex() {

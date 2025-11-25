@@ -28,7 +28,12 @@ public class BattleState {
     public BattleState(Team playerTeam, Team enemyTeam) {
         this.playerTeam = playerTeam;
         this.enemyTeam = enemyTeam;
-        this.currentTurn = Turn.PLAYER;
+        
+        // FIXED: Determine first turn based on Speed (like Pokemon games)
+        int playerSpeed = playerTeam.getActivePokemon().getPokemon().getSpeed();
+        int enemySpeed = enemyTeam.getActivePokemon().getPokemon().getSpeed();
+        this.currentTurn = playerSpeed >= enemySpeed ? Turn.PLAYER : Turn.ENEMY;
+        
         this.phase = BattlePhase.BATTLE_START;
         this.lastActionMessage = "";
         this.battleEnded = false;

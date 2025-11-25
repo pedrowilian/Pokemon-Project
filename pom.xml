@@ -32,5 +32,38 @@
             <artifactId>bcrypt</artifactId>
             <version>0.10.2</version>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <!-- Default resources directory -->
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Ensure move data JSON files are available on the classpath -->
+            <resource>
+                <directory>${project.basedir}</directory>
+                <includes>
+                    <include>movesData.json</include>
+                    <include>movesPokemon.json</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.1.2</version>
+                <configuration>
+                    <useModulePath>false</useModulePath>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -1,6 +1,7 @@
 package backend.application.dto;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * Data Transfer Object for Pokemon
@@ -22,6 +23,12 @@ public class PokemonDTO implements Serializable {
     private int spDef;
     private int speed;
     private int generation;
+    
+    // Battle-specific fields
+    private int currentHp;
+    private int maxHp;
+    private boolean fainted;
+    private List<MoveDTO> availableMoves;
 
     public PokemonDTO() {
     }
@@ -146,5 +153,37 @@ public class PokemonDTO implements Serializable {
 
     public void setGeneration(int generation) {
         this.generation = generation;
+    }
+
+    public int getCurrentHp() {
+        return currentHp;
+    }
+
+    public void setCurrentHp(int currentHp) {
+        this.currentHp = currentHp;
+    }
+
+    public int getMaxHp() {
+        return maxHp;
+    }
+
+    public void setMaxHp(int maxHp) {
+        this.maxHp = maxHp;
+    }
+
+    public boolean isFainted() {
+        return fainted;
+    }
+
+    public void setFainted(boolean fainted) {
+        this.fainted = fainted;
+    }
+
+    public List<MoveDTO> getAvailableMoves() {
+        return availableMoves;
+    }
+
+    public void setAvailableMoves(List<MoveDTO> availableMoves) {
+        this.availableMoves = availableMoves;
     }
 }

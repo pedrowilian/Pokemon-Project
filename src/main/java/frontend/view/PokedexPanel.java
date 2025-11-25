@@ -56,6 +56,8 @@ import shared.util.I18n;
 import shared.util.ReadTextFile;
 import shared.util.TypeTranslator;
 
+// Pokedex Panel
+
 public class PokedexPanel extends JPanel {
     private static final Logger LOGGER = Logger.getLogger(PokedexPanel.class.getName());
     private static final String IMAGE_DIR = "Images/Image-Pokedex/";

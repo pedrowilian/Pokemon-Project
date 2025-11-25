@@ -13,6 +13,8 @@ import java.util.logging.Logger;
 import shared.util.CryptoDummy;
 import shared.util.DateUtils;
 
+// User Model
+
 public class User {
     private static final Logger LOGGER = Logger.getLogger(User.class.getName());
     private final String username;

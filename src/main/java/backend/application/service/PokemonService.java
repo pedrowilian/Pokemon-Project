@@ -106,6 +106,13 @@ public class PokemonService {
     }
 
     /**
+     * Get Pokemon by ID (for multiplayer)
+     */
+    public Pokemon getPokemonById(int id) throws SQLException {
+        return findById(id);
+    }
+
+    /**
      * Validate Pokemon ID (Generation 1: 1-151)
      */
     public static boolean isValidPokemonId(int id) {

@@ -6,19 +6,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Utility class for bidirectional translation of Pokémon move names.
- * Provides translation between English (used in database/backend) and localized names (for UI display).
- * Uses caching for improved performance.
- * 
- * <p>Architecture:
- * <ul>
- *   <li>Database/JSON files store move names in English</li>
- *   <li>Backend logic uses English names</li>
- *   <li>UI displays translated names based on current locale</li>
- * </ul>
- * 
- * @author Pokemon Project
- * @version 2.0
- * @since Phase 3 - Move Internationalization
  */
 public class MoveTranslator {
     

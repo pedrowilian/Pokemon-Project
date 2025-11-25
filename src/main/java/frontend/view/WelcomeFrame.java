@@ -36,6 +36,7 @@ import shared.util.I18n;
  * Welcome screen that displays when the application starts.
  * Allows the user to select their preferred language before proceeding to login.
  */
+
 public class WelcomeFrame extends JFrame {
     private static final Logger LOGGER = Logger.getLogger(WelcomeFrame.class.getName());
     private static final String LOGO_PATH = "Images/pokemon-logo.png";

@@ -8,8 +8,6 @@ import java.time.temporal.ChronoUnit;
 
 /**
  * Classe utilitária para manipulação de datas
- * Implementa funcionalidades de formatação, cálculo e validação de datas
- * Requisito do projeto: Manipulação de Datas
  */
 public class DateUtils {
 

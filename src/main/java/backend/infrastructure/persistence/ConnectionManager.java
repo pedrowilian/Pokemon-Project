@@ -14,9 +14,6 @@ import java.util.logging.Logger;
  */
 public class ConnectionManager {
     private static final Logger LOGGER = Logger.getLogger(ConnectionManager.class.getName());
-    private static final String POKEDEX_DB = "pokedex.db";
-    private static final String USUARIOS_DB = "Usuarios.db";
-
     private static ConnectionManager instance;
 
     private final Map<String, Connection> connections;
@@ -42,20 +39,6 @@ public class ConnectionManager {
             LOGGER.log(Level.INFO, "Created new connection to: {0}", dbName);
         }
         return connections.get(dbName);
-    }
-
-    /**
-     * Get connection to Pokedex database
-     */
-    public Connection getPokedexConnection() throws SQLException {
-        return getConnection(POKEDEX_DB);
-    }
-
-    /**
-     * Get connection to Users database
-     */
-    public Connection getUsersConnection() throws SQLException {
-        return getConnection(USUARIOS_DB);
     }
 
     /**

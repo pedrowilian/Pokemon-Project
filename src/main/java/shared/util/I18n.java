@@ -1,17 +1,19 @@
 package shared.util;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.PropertyResourceBundle;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Internationalization (i18n) manager for the Pokemon application.
- * This class handles loading and retrieving localized strings from resource bundles.
- *
- * ARCHITECTURE NOTE: This class is in shared.util because it's used by both:
- * - Backend (for battle messages, effectiveness text, etc.)
- * - Frontend (for UI labels, buttons, messages, etc.)
  *
  * Supported languages:
  * - Portuguese (Brazil) - pt_BR (default)
@@ -19,22 +21,43 @@ import java.util.logging.Logger;
  * - Italian (Italy) - it_IT
  * - French (France) - fr_FR
  * - Spanish (Spain) - es_ES
- *
- * Usage:
- * <pre>
- * // Get a translated string
- * String title = I18n.get("pokedex.title");
- *
- * // Get a formatted string with parameters
- * String message = I18n.get("pokemon.selected", "Pikachu", 25);
- *
- * // Change language
- * I18n.setLocale(new Locale("en", "US"));
- * </pre>
  */
 public class I18n {
     private static final Logger LOGGER = Logger.getLogger(I18n.class.getName());
     private static final String BUNDLE_NAME = "messages";
+    private static final ResourceBundle.Control UTF8_CONTROL = new ResourceBundle.Control() {
+        @Override
+        public ResourceBundle newBundle(String baseName, Locale locale, String format,
+                                        ClassLoader loader, boolean reload)
+            throws IllegalAccessException, InstantiationException, IOException {
+
+            String bundleName = toBundleName(baseName, locale);
+            String resourceName = toResourceName(bundleName, "properties");
+            ResourceBundle loadedBundle = null;
+            InputStream stream = null;
+
+            if (reload) {
+                URL resourceURL = loader.getResource(resourceName);
+                if (resourceURL != null) {
+                    URLConnection connection = resourceURL.openConnection();
+                    if (connection != null) {
+                        connection.setUseCaches(false);
+                        stream = connection.getInputStream();
+                    }
+                }
+            } else {
+                stream = loader.getResourceAsStream(resourceName);
+            }
+
+            if (stream != null) {
+                try (InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+                    loadedBundle = new PropertyResourceBundle(reader);
+                }
+            }
+
+            return loadedBundle;
+        }
+    };
     private static Locale currentLocale = Locale.of("en", "US"); // Default to English US
     private static ResourceBundle bundle;
 
@@ -47,13 +70,13 @@ public class I18n {
      */
     private static void loadBundle() {
         try {
-            bundle = ResourceBundle.getBundle(BUNDLE_NAME, currentLocale);
+            bundle = ResourceBundle.getBundle(BUNDLE_NAME, currentLocale, UTF8_CONTROL);
             LOGGER.log(Level.INFO, "Loaded resource bundle for locale: {0}", currentLocale);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to load resource bundle for locale: " + currentLocale, e);
             // Fallback to default locale
             try {
-                bundle = ResourceBundle.getBundle(BUNDLE_NAME, Locale.of("en", "US"));
+                bundle = ResourceBundle.getBundle(BUNDLE_NAME, Locale.of("en", "US"), UTF8_CONTROL);
                 LOGGER.log(Level.WARNING, "Falling back to default locale: en_US");
             } catch (Exception ex) {
                 LOGGER.log(Level.SEVERE, "Failed to load default resource bundle", ex);

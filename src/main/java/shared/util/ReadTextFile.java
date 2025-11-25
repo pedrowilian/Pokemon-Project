@@ -7,14 +7,11 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+// Read File mandatory to read the easter egg
 public class ReadTextFile {
     private static final Logger LOGGER = Logger.getLogger(ReadTextFile.class.getName());
     private static final String EASTER_EGG_FILE = "EasterEgg.txt";
 
-    /**
-     * Reads the Easter Egg file and returns its content
-     * @return The content of the Easter Egg file, or an error message if file cannot be read
-     */
     public static String readEasterEgg() {
         File file = new File(EASTER_EGG_FILE);
 

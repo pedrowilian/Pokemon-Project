@@ -1,8 +1,7 @@
 package backend.domain.model;
 
 /**
- * Enriched Pokemon model with battle-specific behavior and state
- * Wraps the original Pokemon model and adds battle logic
+ * Pokemon model within the battle
  */
 public class PokemonBattleStats {
     private final Pokemon pokemon;

@@ -6,30 +6,6 @@ import java.util.Map;
 /**
  * Utility class for translating Pokémon types between English (database format) 
  * and localized display text.
- * 
- * This class acts as a bridge between:
- * - Storage Layer: Types stored in English in database ("fire", "water", etc.)
- * - Presentation Layer: Types displayed in user's language ("Fogo", "Fuego", etc.)
- * 
- * Architecture Note:
- * - Types are stored in English in the database for consistency
- * - Translation happens only at the presentation layer
- * - Uses I18n class for actual translation lookups
- * 
- * Usage:
- * <pre>
- * // Translate from DB to display
- * String displayType = TypeTranslator.translate("fire"); // "Fuego" in Spanish
- * 
- * // Translate from display back to DB format (for queries)
- * String dbType = TypeTranslator.toEnglish("Fuego"); // "fire"
- * 
- * // Translate array of types
- * String[] displayTypes = TypeTranslator.translateTypes(dbTypes);
- * </pre>
- * 
- * @author Pedro
- * @version 2.0
  */
 public class TypeTranslator {
     

@@ -4,7 +4,6 @@ import at.favre.lib.crypto.bcrypt.BCrypt;
 
 /**
  * Secure password hashing using BCrypt
- * Replaces the insecure CryptoDummy implementation
  */
 public class PasswordHasher {
     private static final int BCRYPT_COST = 12;

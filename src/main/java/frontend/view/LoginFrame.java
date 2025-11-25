@@ -39,6 +39,8 @@ import backend.infrastructure.ServiceLocator;
 import frontend.util.UIUtils;
 import shared.util.I18n;
 
+// Login Frame
+
 public class LoginFrame extends JFrame {
     private static final Logger LOGGER = Logger.getLogger(LoginFrame.class.getName());
 

@@ -3,6 +3,27 @@
   "configurations": [
     {
       "type": "java",
+      "name": "ClientMain",
+      "request": "launch",
+      "mainClass": "app.ClientMain",
+      "projectName": "your-project-name"
+    },
+    {
+      "type": "java",
+      "name": "ClienteMain",
+      "request": "launch",
+      "mainClass": "app.ClienteMain",
+      "projectName": "your-project-name"
+    },
+    {
+      "type": "java",
+      "name": "ServerMain",
+      "request": "launch",
+      "mainClass": "app.ServerMain",
+      "projectName": "your-project-name"
+    },
+    {
+      "type": "java",
       "name": "Main",
       "request": "launch",
       "mainClass": "main.java.app.Main",
